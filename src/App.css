@@ -1,0 +1,269 @@
+/* App.css - Trazza Mix | Responsivo Celular + PC */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f0fdf4;
+}
+
+.container {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+/* En PC se ve como app centrada con sombra */
+@media (min-width: 600px) {
+  body {
+    background-color: #e2e8f0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px 0;
+  }
+  .container {
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    min-height: auto;
+    padding: 28px 24px;
+  }
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  color: #15803d;
+  margin-bottom: 4px;
+  font-size: 2rem;
+}
+
+.header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* Sección de agua */
+.water-section {
+  background: white;
+  padding: 14px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.water-section h3 {
+  font-size: 0.85rem;
+  color: #15803d;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.water-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #16a34a;
+}
+
+/* Dropzone */
+.dropzone {
+  border: 2px dashed #86efac;
+  background: white;
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+  margin-bottom: 4px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dropzone:active {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.dropzone label {
+  cursor: pointer;
+  display: block;
+}
+
+.dropzone p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.mini-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Botón analizar */
+.btn-analyze {
+  width: 100%;
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 14px;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-top: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-analyze:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.btn-analyze:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-analyze:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Tarjeta resultado */
+.result-card {
+  background: white;
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  border-top: 6px solid #facc15;
+}
+
+.result-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.2rem;
+}
+
+/* Lista de orden */
+.order-list {
+  background: #f1f5f9;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.order-list p {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: bold;
+}
+
+.order-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-list li {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Tip del Ing. William */
+.william-tip {
+  margin-top: 14px;
+  font-size: 0.88rem;
+  color: #475569;
+  border-left: 3px solid #16a34a;
+  padding-left: 10px;
+  line-height: 1.5;
+}
+
+/* ✅ Botón Nueva Mezcla — ROJO */
+.btn-reset {
+  width: 100%;
+  margin-top: 16px;
+  background: #ef4444;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: bold;
+  transition: background 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-reset:hover {
+  background: #dc2626;
+}
+
+.btn-reset:active {
+  transform: scale(0.98);
+}
+
+/* Responsivo — pantallas pequeñas */
+@media (max-width: 380px) {
+  .header h1 {
+    font-size: 1.7rem;
+  }
+  .water-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .input-group input {
+    font-size: 0.85rem;
+    padding: 6px;
+  }
+  .mini-img {
+    width: 54px;
+    height: 54px;
+  }
+}
