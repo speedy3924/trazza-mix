@@ -21,7 +21,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [base64Images, setBase64Images] = useState([]);
   const [waterData, setWaterData] = useState({ ph: '', ce: '', hardness: '' });
-  const [userType, setUserType] = useState('agricultor'); // 'agricultor' | 'ingeniero'
+  const [userType, setUserType] = useState('productor'); // 'productor' | 'ingeniero'
 
   // Animar los pasos de carga
   useEffect(() => {
@@ -68,7 +68,7 @@ function App() {
 
 PERFIL DEL USUARIO: ${userType === 'ingeniero'
   ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
-  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
+  : 'PRODUCTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
 
 DATOS DEL AGUA:
 ${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
@@ -85,7 +85,7 @@ ${esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante
 PASO 0 — CORRECTOR DE pH/ABLANDADOR: 
   → SOLO si pH > 7.5 O dureza > 300 ppm Y hay un corrector entre los productos.
   → Si el agua está bien (pH 5.5-7.5 y dureza ≤ 300): NO va ningún corrector al inicio. 
-  → Los productos como BB5, Triada-Aguas, Triple A son coadyuvantes/surfactantes cuando el agua es buena → van al FINAL (paso E).
+  → Los productos como Acidol-5, Surfaq, BB5, Triada-Aguas, Triple A son coadyuvantes/surfactantes cuando el agua es buena → van al FINAL (paso E).
 
 PASO W — AGUA: Llenar el tanque con agua (no es un producto, no listar).
 
@@ -190,16 +190,16 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       {/* Selector de perfil */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
         <button
-          onClick={() => setUserType('agricultor')}
+          onClick={() => setUserType('productor')}
           style={{
             flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
-            borderColor: userType === 'agricultor' ? '#16a34a' : '#cbd5e1',
-            background: userType === 'agricultor' ? '#dcfce7' : 'white',
-            fontWeight: userType === 'agricultor' ? 'bold' : 'normal',
+            borderColor: userType === 'productor' ? '#16a34a' : '#cbd5e1',
+            background: userType === 'productor' ? '#dcfce7' : 'white',
+            fontWeight: userType === 'ptor' ? 'bold' : 'normal',
             cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
             transition: 'all 0.2s'
           }}>
-          🌾 Agricultor
+          🌾 Productor
         </button>
         <button
           onClick={() => setUserType('ingeniero')}
