@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBu3VxyXpWfP-Zh5ytbHVwzci7xtS2PW5w",
+  authDomain: "trazza-mix.firebaseapp.com",
+  projectId: "trazza-mix",
+  storageBucket: "trazza-mix.firebasestorage.app",
+  messagingSenderId: "30480365444",
+  appId: "1:30480365444:web:2fd11ca071b9b2ae5e0fd1",
+  measurementId: "G-H05D34W0RN"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+getAnalytics(firebaseApp);
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -21,7 +38,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [base64Images, setBase64Images] = useState([]);
   const [waterData, setWaterData] = useState({ ph: '', ce: '', hardness: '' });
-  const [userType, setUserType] = useState('productor'); // 'productor' | 'ingeniero'
+  const [userType, setUserType] = useState('agricultor'); // 'agricultor' | 'ingeniero'
 
   // Animar los pasos de carga
   useEffect(() => {
@@ -68,7 +85,7 @@ function App() {
 
 PERFIL DEL USUARIO: ${userType === 'ingeniero'
   ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
-  : 'PRODUCTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
+  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
 
 DATOS DEL AGUA:
 ${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
@@ -85,7 +102,7 @@ ${esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante
 PASO 0 — CORRECTOR DE pH/ABLANDADOR: 
   → SOLO si pH > 7.5 O dureza > 300 ppm Y hay un corrector entre los productos.
   → Si el agua está bien (pH 5.5-7.5 y dureza ≤ 300): NO va ningún corrector al inicio. 
-  → Los productos como Acidol-5, Surfaq, BB5, Triada-Aguas, Triple A son coadyuvantes/surfactantes cuando el agua es buena → van al FINAL (paso E).
+  → Los productos como BB5, Triada-Aguas, Triple A son coadyuvantes/surfactantes cuando el agua es buena → van al FINAL (paso E).
 
 PASO W — AGUA: Llenar el tanque con agua (no es un producto, no listar).
 
@@ -156,7 +173,28 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const cleanJson = text.replace(/```json|```/g, "").trim();
-      setResult(JSON.parse(cleanJson));
+      const parsed = JSON.parse(cleanJson);
+      setResult(parsed);
+
+      // Guardar en Firestore
+      try {
+        await addDoc(collection(db, 'analisis'), {
+          timestamp: serverTimestamp(),
+          perfil: userType,
+          agua: {
+            ph: waterData.ph || null,
+            ce: waterData.ce || null,
+            dureza: waterData.hardness || null,
+          },
+          productos: parsed.products?.map(p => p.name) || [],
+          cantidadProductos: base64Images.length,
+          status: parsed.status || null,
+          waterAlert: parsed.waterAlert || null,
+          missingCorrector: parsed.missingCorrector || false,
+        });
+      } catch (fbError) {
+        console.warn('Firebase error (no critico):', fbError);
+      }
 
     } catch (error) {
       console.error("ERROR REAL:", error);
@@ -190,16 +228,16 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       {/* Selector de perfil */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
         <button
-          onClick={() => setUserType('productor')}
+          onClick={() => setUserType('agricultor')}
           style={{
             flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
-            borderColor: userType === 'productor' ? '#16a34a' : '#cbd5e1',
-            background: userType === 'productor' ? '#dcfce7' : 'white',
-            fontWeight: userType === 'ptor' ? 'bold' : 'normal',
+            borderColor: userType === 'agricultor' ? '#16a34a' : '#cbd5e1',
+            background: userType === 'agricultor' ? '#dcfce7' : 'white',
+            fontWeight: userType === 'agricultor' ? 'bold' : 'normal',
             cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
             transition: 'all 0.2s'
           }}>
-          🌾 Productor
+          🌾 Agricultor
         </button>
         <button
           onClick={() => setUserType('ingeniero')}
