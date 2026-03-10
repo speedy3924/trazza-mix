@@ -123,7 +123,7 @@ CLASIFICACIÓN OBLIGATORIA de cada producto:
 
 INSTRUCCIONES:
 1. Identifica todos los productos de las imágenes y clasifica cada uno según su formulación.
-2. DOSIS: Lee la etiqueta. Si no se ve, usa dosis estándar internacional. NUNCA "No especificada". Siempre en 200L (ej: Antracol 70% PM = 400-600 g/200L).
+2. DOSIS: Lee la dosis DIRECTAMENTE de la etiqueta visible en la imagen. Si la dosis por 200L está clara → úsala. Si NO puedes leerla con certeza → coloca dose: "Ver etiqueta ⚠️", doseConfirm: true, y doseNote: "No pude leer la dosis con claridad — confirma con tu etiqueta física antes de aplicar." NUNCA inventes ni estimes dosis si no están claramente visibles.
 3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
 4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
 5. Adapta lenguaje al perfil del usuario arriba indicado.
@@ -141,6 +141,7 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       "active": "Ingrediente activo",
       "dose": "Dosis por 200L ej: 400 g/200L",
       "doseAdjusted": "Dosis ajustada si aplica, sino igual a dose",
+      "doseConfirm": false,
       "doseNote": "1 oración de razón o null"
     }
   ],
@@ -380,13 +381,24 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
                 }}>
                   <p style={{ margin: '0 0 4px', fontWeight: 'bold' }}>🧪 {p.name}</p>
                   <p style={{ margin: '0 0 2px', fontSize: '0.85rem', color: '#475569' }}>Activo: {p.active}</p>
-                  <p style={{ margin: '0 0 2px', fontSize: '0.85rem' }}>Dosis: <strong>{p.dose}</strong></p>
+                  {p.doseConfirm ? (
+                    <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', padding: '8px 10px', margin: '4px 0' }}>
+                      <p style={{ margin: '0 0 2px', fontSize: '0.85rem', fontWeight: 'bold', color: '#b45309' }}>
+                        ⚠️ Dosis: confirmar con etiqueta física
+                      </p>
+                      <p style={{ margin: '0', fontSize: '0.8rem', color: '#92400e' }}>
+                        No se pudo leer con claridad — verifica antes de aplicar
+                      </p>
+                    </div>
+                  ) : (
+                    <p style={{ margin: '0 0 2px', fontSize: '0.85rem' }}>Dosis: <strong>{p.dose}</strong></p>
+                  )}
                   {p.doseAdjusted && p.doseAdjusted !== p.dose && (
                     <p style={{ margin: '0 0 2px', fontSize: '0.85rem', color: '#b45309' }}>
                       ⚠️ Dosis ajustada: <strong>{p.doseAdjusted}</strong>
                     </p>
                   )}
-                  {p.doseNote && (
+                  {p.doseNote && !p.doseConfirm && (
                     <p style={{ margin: '0', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>{p.doseNote}</p>
                   )}
                 </div>
