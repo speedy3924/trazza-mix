@@ -111,6 +111,7 @@ DATOS DEL AGUA:
 ${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
 - waterAlert = null. NO advertir ni regañar al usuario por no ingresar datos.
 - Aplica WALE asumiendo agua neutra (pH 7, CE normal, dureza normal).
+- BB5, Acidol, Triada-Aguas, Triple A y similares: sin datos de agua → van al FINAL (paso E) por precaución, asumiendo agua neutra. En el orden WALE explica: "Va al final porque sin datos del agua asumimos pH neutro, por lo que no se necesita como corrector al inicio."
 - En el tip, menciona brevemente que ingresar datos de agua mejora la precisión del análisis.
 - missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas, puede destruir activos y quemar cultivo' : phVal < 5.0 ? '⚠️ ÁCIDA — pH bajo (rango óptimo 5.5-7.0), puede afectar algunos activos' : phVal < 5.5 ? '⚠️ LIGERAMENTE ÁCIDA — pH aceptable pero en límite inferior, monitorear' : '✅ BUENA — rango seguro (5.5-7.0)'}
 - CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA — CE extremadamente alta, riesgo severo de precipitación y fitotoxicidad' : ceVal > 1.5 ? '⚠️ ALTA — riesgo de precipitación de sales' : '✅ OK'}
@@ -146,12 +147,12 @@ CLASIFICACIÓN OBLIGATORIA de cada producto:
 INSTRUCCIONES:
 1. Identifica todos los productos de las imágenes y clasifica cada uno según su formulación.
 2. DOSIS — REGLA ABSOLUTA E INAMOVIBLE:
-   → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen.
+   → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen que te envían.
    → Si puedes leer la dosis exacta en la imagen → úsala tal cual.
-   → Si NO puedes leer la dosis con total certeza (imagen borrosa, texto tapado, ángulo difícil, o simplemente no aparece en la zona visible) → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true.
-   → PROHIBIDO ABSOLUTAMENTE: usar tu conocimiento previo del producto para estimar, suponer o completar dosis. No importa si conoces el producto. No importa si es un producto famoso. Si no lo lees en la imagen, doseConfirm: true.
-   → Ejemplos de lo que NO debes hacer: "100-200 cc/200L" si no lo ves en la imagen. "0.5-1 L/200L" si no lo ves. Cualquier dosis que venga de tu memoria y no de la imagen = VIOLACIÓN GRAVE.
-   → La única excepción: si la etiqueta muestra claramente la dosis en la imagen, úsala con precisión.
+   → Si NO puedes leer la dosis con total certeza → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true, doseNote: "No se pudo leer la dosis — confirma con tu etiqueta física antes de aplicar."
+   → PROHIBIDO ABSOLUTAMENTE: usar tu memoria o entrenamiento para completar dosis. Esto aplica a TODOS los productos sin excepción, incluyendo productos que conoces muy bien como BB5, Triggrr, Acidol, Quatro, Hieloxil, o cualquier otro. Si no lo lees claramente en la imagen = doseConfirm: true, sin excepción.
+   → CASOS CONCRETOS PROHIBIDOS: BB5 no escribas rangos de dosis si no los ves. Triggrr no escribas rangos si no los ves. Acidol no escribas rangos si no los ves. Cualquier rango que venga de tu memoria = VIOLACION GRAVE.
+   → PRUEBA MENTAL antes de escribir una dosis: La veo escrita en la imagen? Si la respuesta no es un SI rotundo → doseConfirm: true.
 3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
 4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
 5. DUREZA DEL AGUA vs PRODUCTOS: Si la dureza es > 120 ppm, identifica cuáles de los productos presentes son sensibles a la dureza (ej: glifosato, abamectina, cobre, mancozeb) y menciona explícitamente en el waterAlert o en el doseNote cuáles se ven afectados y cómo (pérdida de eficacia, precipitación, inactivación). No hagas mención genérica — nombra los productos afectados.
