@@ -38,6 +38,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [base64Images, setBase64Images] = useState([]);
   const [waterData, setWaterData] = useState({ ph: '', ce: '', hardness: '' });
+  const [cropData, setCropData] = useState({ cultivo: '', problema: '' });
   const [userType, setUserType] = useState('productor'); // 'productor' | 'ingeniero'
   const userTypeRef = useRef('productor');
 
@@ -97,6 +98,10 @@ function App() {
       const statusForzado = esAgua_critica ? '🔴 Agua No Apta para Mezcla' : null;
 
       const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
+
+CULTIVO: ${cropData.cultivo || 'No especificado'}
+PROBLEMA FITOSANITARIO: ${cropData.problema || 'No especificado'}
+${cropData.cultivo || cropData.problema ? '→ Adapta las recomendaciones de dosis y compatibilidad al cultivo y problema indicados.' : '→ Sin cultivo/problema especificado, da recomendaciones generales.'}
 
 PERFIL DEL USUARIO: ${tipoUsuario === 'ingeniero'
   ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
@@ -207,6 +212,8 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
             ce: waterData.ce || null,
             dureza: waterData.hardness || null,
           },
+          cultivo: cropData.cultivo || null,
+          problema: cropData.problema || null,
           productos: parsed.products?.map(p => p.name) || [],
           formulaciones: parsed.products?.map(p => p.active) || [],
           cantidadProductos: base64Images.length,
@@ -263,6 +270,7 @@ _Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
     setBase64Images([]);
     setResult(null);
     setWaterData({ ph: '', ce: '', hardness: '' });
+    setCropData({ cultivo: '', problema: '' });
   };
 
   const getBorderColor = (status) => {
@@ -321,6 +329,31 @@ _Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
           <div className="input-group">
             <label>Dureza (ppm)</label>
             <input type="number" value={waterData.hardness} onChange={(e) => setWaterData({...waterData, hardness: e.target.value})} />
+          </div>
+        </div>
+      </div>
+
+      {/* Cultivo y Problema — opcional */}
+      <div className="water-section" style={{ marginTop: '12px' }}>
+        <h3>Cultivo y Problema (Opcional)</h3>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="input-group" style={{ flex: 1 }}>
+            <label>Cultivo</label>
+            <input
+              type="text"
+              placeholder="Ej: vid, tomate, maíz"
+              value={cropData.cultivo}
+              onChange={e => setCropData({...cropData, cultivo: e.target.value})}
+            />
+          </div>
+          <div className="input-group" style={{ flex: 1 }}>
+            <label>Problema</label>
+            <input
+              type="text"
+              placeholder="Ej: mildiu, trips, botrytis"
+              value={cropData.problema}
+              onChange={e => setCropData({...cropData, problema: e.target.value})}
+            />
           </div>
         </div>
       </div>
