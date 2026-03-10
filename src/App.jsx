@@ -92,7 +92,7 @@ function App() {
       const phVal = parseFloat(ph||0);
       const ceVal = parseFloat(ce||0);
       const hardVal = parseFloat(hardness||0);
-      const esAgua_mala = !sinDatosAgua && (phVal > 7.5 || phVal < 5.5 || ceVal > 1.5 || hardVal > 150);
+      const esAgua_mala = !sinDatosAgua && (phVal > 7.5 || phVal < 5.0 || ceVal > 1.5 || hardVal > 150);
       const esAgua_critica = !sinDatosAgua && (phVal < 4.0 || phVal > 8.5 || ceVal > 3.0);
       const statusForzado = esAgua_critica ? '🔴 Agua No Apta para Mezcla' : null;
 
@@ -107,7 +107,7 @@ ${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
 - waterAlert = null. NO advertir ni regañar al usuario por no ingresar datos.
 - Aplica WALE asumiendo agua neutra (pH 7, CE normal, dureza normal).
 - En el tip, menciona brevemente que ingresar datos de agua mejora la precisión del análisis.
-- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas, puede destruir activos y quemar cultivo' : phVal < 5.5 ? '⚠️ MUY ÁCIDA — fuera del rango seguro (5.5-7.0), ajustar antes de mezclar' : '✅ BUENA — rango seguro (5.5-7.0)'}
+- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas, puede destruir activos y quemar cultivo' : phVal < 5.0 ? '⚠️ ÁCIDA — pH bajo (rango óptimo 5.5-7.0), puede afectar algunos activos' : phVal < 5.5 ? '⚠️ LIGERAMENTE ÁCIDA — pH aceptable pero en límite inferior, monitorear' : '✅ BUENA — rango seguro (5.5-7.0)'}
 - CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA — CE extremadamente alta, riesgo severo de precipitación y fitotoxicidad' : ceVal > 1.5 ? '⚠️ ALTA — riesgo de precipitación de sales' : '✅ OK'}
 - Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA — inactivación severa de activos, corrector obligatorio' : hardVal > 150 ? '⚠️ DURA — riesgo de inactivación, corrector necesario (umbral técnico: 150 ppm CaCO3)' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable (umbral conservador: 120 ppm CaCO3)' : '✅ BLANDA — sin riesgo de inactivación'}
 ${esAgua_critica ? '🚨 AGUA CRÍTICA: pH o CE fuera de rango peligroso. USA status "🔴 Agua No Apta para Mezcla". Activa waterAlert con advertencia URGENTE en MAYÚSCULAS. missingCorrector: true. missingCorrectorMsg debe decir que el agua debe tratarse ANTES de cualquier mezcla.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante entre los productos. Si NO hay, activa missingCorrector: true.' : '✅ AGUA APTA: No se necesita corrector de pH. Los coadyuvantes/surfactantes NO son correctores de pH y van al FINAL.'}`}
@@ -116,9 +116,10 @@ ${esAgua_critica ? '🚨 AGUA CRÍTICA: pH o CE fuera de rango peligroso. USA st
 
 PASO 0 — CORRECTOR DE pH/ABLANDADOR: 
   → SOLO si pH > 7.5 O dureza > 150 ppm Y hay un corrector alcalinizante entre los productos.
-  → Si el agua YA es ácida (pH < 5.5): NO agregar más acidificantes al inicio. BB5, Triada-Aguas, Acidol son acidificantes — con agua ya ácida van al FINAL (paso E) o se advierten como innecesarios.
-  → Si el agua está bien (pH 5.5-7.5 y dureza ≤ 150): NO va ningún corrector al inicio.
+  → Si el agua está bien (pH 5.0-7.5 y dureza ≤ 150): NO va ningún corrector al inicio.
+  → Si el agua YA es ácida (pH < 5.0): NO agregar más acidificantes. BB5, Triada-Aguas, Acidol van al FINAL.
   → BB5, Triada-Aguas, Triple A, Acidol-5, Surfaq: con agua ALCALINA (pH > 7.5) → paso 0 (INICIO). Con agua neutra o ácida → paso E (FINAL).
+  → IMPORTANTE: pH entre 5.0-5.5 es PRECAUCIÓN LEVE — no es agua crítica, no exageres la alerta. Solo menciona que está en el límite inferior del rango óptimo.
 
 PASO W — AGUA: Llenar el tanque con agua (no es un producto, no listar).
 
