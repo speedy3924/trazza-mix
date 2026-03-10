@@ -291,7 +291,7 @@ _Conoce más en: trazza360.com_`;
         <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#15803d', letterSpacing: '-0.5px' }}>
           Trazza Mix
         </h1>
-        <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>
+        <p style={{ margin: '4px 0 0', fontSize: '0.92rem', color: '#94a3b8', fontStyle: 'italic' }}>
           Copiloto Global de Mezclas Agrícolas
         </p>
       </header>
@@ -388,7 +388,7 @@ _Conoce más en: trazza360.com_`;
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: '500'
         }}>
-          <span>💧 ¿Conoces el pH de tu agua o tu cultivo? <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></span>
+          <span>💧 ¿Conoces el pH de tu agua o tu cultivo?</span>
           <span style={{ transition: 'transform 0.2s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
         </button>
 
