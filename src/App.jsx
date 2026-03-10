@@ -207,10 +207,14 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
             dureza: waterData.hardness || null,
           },
           productos: parsed.products?.map(p => p.name) || [],
+          formulaciones: parsed.products?.map(p => p.active) || [],
           cantidadProductos: base64Images.length,
           status: parsed.status || null,
           waterAlert: parsed.waterAlert || null,
           missingCorrector: parsed.missingCorrector || false,
+          ordenMezcla: parsed.order || [],
+          paisRegion: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+          idiomaBrowser: navigator.language || null,
         });
       } catch (fbError) {
         console.warn('Firebase error (no critico):', fbError);
@@ -222,6 +226,35 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
     } finally {
       setLoading(false);
     }
+  };
+
+  const shareWhatsApp = () => {
+    if (!result) return;
+    const productos = result.products?.map(p => `• ${p.name}${p.dose && !p.doseConfirm ? ' — ' + p.dose : ''}`).join('\n') || '';
+    const orden = result.order?.map((s, i) => `${i+1}. ${s.replace(/✅\s*/,'')}`).join('\n') || '';
+    const agua = waterData.ph || waterData.ce || waterData.hardness
+      ? `pH: ${waterData.ph||'—'} | CE: ${waterData.ce||'—'} mS/cm | Dureza: ${waterData.hardness||'—'} ppm`
+      : 'No ingresada';
+    const msg = `🌱 *Simulación de mezcla — Trazza Mix*
+
+*Estado:* ${result.status}
+
+*Productos:*
+${productos}
+
+*Orden de mezcla (WALE):*
+${orden}
+
+*Calidad del agua:*
+${agua}
+
+*💡 Tip del Ing. William:*
+${result.tip}
+
+🔗 Herramienta: mix.trazza360.com
+_Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
   };
 
   const resetApp = () => {
@@ -365,7 +398,18 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
 
       {result && (
         <div className="result-card" style={{ borderTop: `6px solid ${getBorderColor(result.status)}` }}>
-          <h2>{result.status}</h2>
+          {/* Índice de riesgo visual */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <h2 style={{ margin: 0 }}>{result.status}</h2>
+            <div style={{
+              fontSize: '0.75rem', fontWeight: 'bold', padding: '3px 10px',
+              borderRadius: '20px', background: getBorderColor(result.status) + '22',
+              color: getBorderColor(result.status), border: `1px solid ${getBorderColor(result.status)}`
+            }}>
+              {result.status?.includes('🟢') ? 'RIESGO BAJO' :
+               result.status?.includes('🟡') ? 'RIESGO MEDIO' : 'RIESGO ALTO'}
+            </div>
+          </div>
 
           {/* 🚨 Alerta crítica: falta corrector de pH */}
           {result.missingCorrector && result.missingCorrectorMsg && (
@@ -432,9 +476,26 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
           </div>
 
           <p className="william-tip"><i><strong>Tip del Ing. William:</strong> {result.tip}</i></p>
-          <button className="btn-reset" onClick={resetApp}>Nueva Mezcla</button>
+
+          {/* Botones de acción */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            <button className="btn-reset" onClick={resetApp} style={{ flex: 1 }}>🔄 Nueva Mezcla</button>
+            <button onClick={shareWhatsApp} style={{
+              flex: 1, padding: '12px', background: '#25D366', color: 'white',
+              border: 'none', borderRadius: '12px', fontSize: '0.95rem',
+              fontWeight: 'bold', cursor: 'pointer'
+            }}>📲 Compartir</button>
+          </div>
         </div>
       )}
+
+      {/* Footer Powered by Trazza360 */}
+      <div style={{ textAlign: 'center', marginTop: '24px', paddingBottom: '16px' }}>
+        <a href="https://trazza360.com" target="_blank" rel="noopener noreferrer"
+          style={{ color: '#94a3b8', fontSize: '0.78rem', textDecoration: 'none' }}>
+          Trazza Mix · Herramienta del ecosistema <strong style={{ color: '#16a34a' }}>Trazza360</strong>
+        </a>
+      </div>
     </div>
   );
 }
