@@ -38,7 +38,16 @@ function App() {
   const [images, setImages] = useState([]);
   const [base64Images, setBase64Images] = useState([]);
   const [waterData, setWaterData] = useState({ ph: '', ce: '', hardness: '' });
-  const [userType, setUserType] = useState('agricultor'); // 'agricultor' | 'ingeniero'
+  const [userType, setUserType] = useState('productor'); // 'productor' | 'ingeniero'
+  const [prevUserType, setPrevUserType] = useState('productor');
+
+  // Reanalizar si hay resultado activo y cambia el perfil
+  useEffect(() => {
+    if (result && userType !== prevUserType && base64Images.length >= 2) {
+      setPrevUserType(userType);
+      analyzeMix();
+    }
+  }, [userType]);
 
   // Animar los pasos de carga
   useEffect(() => {
@@ -229,12 +238,12 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       {/* Selector de perfil */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
         <button
-          onClick={() => setUserType('agricultor')}
+          onClick={() => setUserType('productor')}
           style={{
             flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
-            borderColor: userType === 'agricultor' ? '#16a34a' : '#cbd5e1',
-            background: userType === 'agricultor' ? '#dcfce7' : 'white',
-            fontWeight: userType === 'agricultor' ? 'bold' : 'normal',
+            borderColor: userType === 'productor' ? '#16a34a' : '#cbd5e1',
+            background: userType === 'productor' ? '#dcfce7' : 'white',
+            fontWeight: userType === 'productor' ? 'bold' : 'normal',
             cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
             transition: 'all 0.2s'
           }}>
