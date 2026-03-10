@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Fondo verde redondeado -->
+  <rect width="100" height="100" rx="22" fill="#16a34a"/>
+  <!-- Hoja -->
+  <path d="M55 20 C75 20 80 35 70 48 C65 54 58 56 52 54 L52 70 L48 70 L48 54 C42 56 35 54 30 48 C20 35 25 20 45 20 Z" fill="white"/>
+  <!-- Gota de agua -->
+  <path d="M50 58 C50 58 38 72 38 80 C38 87 43 92 50 92 C57 92 62 87 62 80 C62 72 50 58 50 58 Z" fill="white" opacity="0.85"/>
+</svg>
