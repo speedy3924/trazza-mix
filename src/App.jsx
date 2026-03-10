@@ -145,7 +145,13 @@ CLASIFICACIÓN OBLIGATORIA de cada producto:
 
 INSTRUCCIONES:
 1. Identifica todos los productos de las imágenes y clasifica cada uno según su formulación.
-2. DOSIS: Lee la dosis DIRECTAMENTE de la etiqueta visible en la imagen. Si la dosis por 200L está clara → úsala. Si NO puedes leerla con certeza → coloca dose: "Ver etiqueta ⚠️", doseConfirm: true, y doseNote: "No pude leer la dosis con claridad — confirma con tu etiqueta física antes de aplicar." NUNCA inventes ni estimes dosis si no están claramente visibles.
+2. DOSIS — REGLA ABSOLUTA E INAMOVIBLE:
+   → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen.
+   → Si puedes leer la dosis exacta en la imagen → úsala tal cual.
+   → Si NO puedes leer la dosis con total certeza (imagen borrosa, texto tapado, ángulo difícil, o simplemente no aparece en la zona visible) → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true.
+   → PROHIBIDO ABSOLUTAMENTE: usar tu conocimiento previo del producto para estimar, suponer o completar dosis. No importa si conoces el producto. No importa si es un producto famoso. Si no lo lees en la imagen, doseConfirm: true.
+   → Ejemplos de lo que NO debes hacer: "100-200 cc/200L" si no lo ves en la imagen. "0.5-1 L/200L" si no lo ves. Cualquier dosis que venga de tu memoria y no de la imagen = VIOLACIÓN GRAVE.
+   → La única excepción: si la etiqueta muestra claramente la dosis en la imagen, úsala con precisión.
 3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
 4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
 5. DUREZA DEL AGUA vs PRODUCTOS: Si la dureza es > 120 ppm, identifica cuáles de los productos presentes son sensibles a la dureza (ej: glifosato, abamectina, cobre, mancozeb) y menciona explícitamente en el waterAlert o en el doseNote cuáles se ven afectados y cómo (pérdida de eficacia, precipitación, inactivación). No hagas mención genérica — nombra los productos afectados.
