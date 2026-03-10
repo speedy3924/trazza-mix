@@ -470,10 +470,41 @@ _Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
             </div>
           )}
 
-          {/* Orden WALE */}
-          <div className="order-list">
-            <p><strong>ORDEN DE MEZCLA (WALE):</strong></p>
-            <ul>{result.order.map((s, i) => <li key={i}>✅ {s}</li>)}</ul>
+          {/* Orden WALE — diseño premium */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ width: '4px', height: '20px', background: '#16a34a', borderRadius: '2px' }}/>
+              <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#1e293b', letterSpacing: '0.05em' }}>
+                ORDEN DE MEZCLA (WALE)
+              </p>
+            </div>
+            {result.order.map((s, i) => {
+              const stepColors = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4'];
+              const color = stepColors[i % stepColors.length];
+              const cleanText = s.replace(/^\d+\.\s*/, '');
+              const colonIdx = cleanText.indexOf(':');
+              const title = colonIdx > -1 ? cleanText.substring(0, colonIdx) : cleanText;
+              const desc = colonIdx > -1 ? cleanText.substring(colonIdx + 1).trim() : '';
+              return (
+                <div key={i} style={{
+                  display: 'flex', gap: '12px', alignItems: 'flex-start',
+                  background: 'white', borderRadius: '12px', padding: '12px 14px',
+                  marginBottom: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
+                  border: '1px solid #f1f5f9'
+                }}>
+                  <div style={{
+                    minWidth: '28px', height: '28px', borderRadius: '50%',
+                    background: color, color: 'white', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0
+                  }}>{i + 1}</div>
+                  <div>
+                    <p style={{ margin: '0 0 2px', fontWeight: 'bold', fontSize: '0.88rem', color: '#1e293b' }}>{title}</p>
+                    {desc && <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>{desc}</p>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <p className="william-tip"><i><strong>Tip del Ing. William:</strong> {result.tip}</i></p>
