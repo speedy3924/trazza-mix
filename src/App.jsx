@@ -480,9 +480,13 @@ _Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
 
           {/* Botones de acción */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-            <button className="btn-reset" onClick={resetApp} style={{ flex: 1 }}>🔄 Nueva Mezcla</button>
+            <button onClick={resetApp} style={{
+              flex: 1, padding: '14px', background: '#ef4444', color: 'white',
+              border: 'none', borderRadius: '12px', fontSize: '0.95rem',
+              fontWeight: 'bold', cursor: 'pointer'
+            }}>🔄 Nueva Mezcla</button>
             <button onClick={shareWhatsApp} style={{
-              flex: 1, padding: '12px', background: '#25D366', color: 'white',
+              flex: 1, padding: '14px', background: '#25D366', color: 'white',
               border: 'none', borderRadius: '12px', fontSize: '0.95rem',
               fontWeight: 'bold', cursor: 'pointer'
             }}>📲 Compartir</button>
@@ -493,8 +497,10 @@ _Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
       {/* Footer Powered by Trazza360 */}
       <div style={{ textAlign: 'center', marginTop: '24px', paddingBottom: '16px' }}>
         <a href="https://trazza360.com" target="_blank" rel="noopener noreferrer"
-          style={{ color: '#94a3b8', fontSize: '0.78rem', textDecoration: 'none' }}>
-          Trazza Mix · Herramienta del ecosistema <strong style={{ color: '#16a34a' }}>Trazza360</strong>
+          style={{ color: '#94a3b8', fontSize: '0.78rem', textDecoration: 'none' }}
+          onMouseEnter={e => e.currentTarget.querySelector('strong').style.textDecoration = 'underline'}
+          onMouseLeave={e => e.currentTarget.querySelector('strong').style.textDecoration = 'none'}>
+          Trazza Mix · Herramienta del ecosistema <strong style={{ color: '#16a34a', textDecoration: 'none', transition: 'all 0.2s' }}>Trazza360 ↗</strong>
         </a>
       </div>
     </div>
