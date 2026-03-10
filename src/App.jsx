@@ -281,89 +281,58 @@ _Conoce más en: trazza360.com_`;
     return '#22c55e';
   };
 
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   return (
     <div className="container">
-      <header className="header">
-        <h1>Trazza Mix</h1>
-        <p><i>Copiloto Global de Mezclas Agrícolas</i></p>
+
+      {/* HEADER compacto */}
+      <header style={{ textAlign: 'center', paddingTop: '28px', paddingBottom: '8px' }}>
+        <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '800', color: '#15803d', letterSpacing: '-0.5px' }}>
+          Trazza Mix
+        </h1>
+        <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>
+          Copiloto Global de Mezclas Agrícolas
+        </p>
       </header>
 
-      {/* Selector de perfil */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-        <button
-          onClick={() => { if (userType !== 'productor') { userTypeRef.current = 'productor'; setUserType('productor'); } }}
-          style={{
-            flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
-            borderColor: userType === 'productor' ? '#16a34a' : '#cbd5e1',
-            background: userType === 'productor' ? '#dcfce7' : 'white',
-            fontWeight: userType === 'productor' ? 'bold' : 'normal',
-            cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
-            transition: 'all 0.2s'
+      {/* Selector de perfil — chips pequeños */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '16px 0' }}>
+        {['productor', 'ingeniero'].map(tipo => (
+          <button key={tipo} onClick={() => { userTypeRef.current = tipo; setUserType(tipo); }} style={{
+            padding: '6px 18px', borderRadius: '20px', border: '1.5px solid',
+            borderColor: userType === tipo ? '#16a34a' : '#e2e8f0',
+            background: userType === tipo ? '#16a34a' : 'white',
+            color: userType === tipo ? 'white' : '#64748b',
+            fontWeight: userType === tipo ? '700' : '400',
+            fontSize: '0.82rem', cursor: 'pointer', transition: 'all 0.2s'
           }}>
-          🌾 Productor
-        </button>
-        <button
-          onClick={() => { if (userType !== 'ingeniero') { userTypeRef.current = 'ingeniero'; setUserType('ingeniero'); } }}
-          style={{
-            flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
-            borderColor: userType === 'ingeniero' ? '#16a34a' : '#cbd5e1',
-            background: userType === 'ingeniero' ? '#dcfce7' : 'white',
-            fontWeight: userType === 'ingeniero' ? 'bold' : 'normal',
-            cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
-            transition: 'all 0.2s'
-          }}>
-          👨‍🔬 Ingeniero
-        </button>
+            {tipo === 'productor' ? '🌾 Productor' : '👨‍🔬 Ingeniero'}
+          </button>
+        ))}
       </div>
 
-      <div className="water-section">
-        <h3>Calidad del Agua (Opcional)</h3>
-        <div className="water-grid">
-          <div className="input-group">
-            <label>pH</label>
-            <input type="number" step="0.1" value={waterData.ph} onChange={(e) => setWaterData({...waterData, ph: e.target.value})} />
-          </div>
-          <div className="input-group">
-            <label>CE (mS/cm)</label>
-            <input type="number" step="0.1" value={waterData.ce} onChange={(e) => setWaterData({...waterData, ce: e.target.value})} />
-          </div>
-          <div className="input-group">
-            <label>Dureza (ppm)</label>
-            <input type="number" value={waterData.hardness} onChange={(e) => setWaterData({...waterData, hardness: e.target.value})} />
-          </div>
-        </div>
-      </div>
-
-      {/* Cultivo y Problema — opcional */}
-      <div className="water-section" style={{ marginTop: '12px' }}>
-        <h3>Cultivo y Problema (Opcional)</h3>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div className="input-group" style={{ flex: 1 }}>
-            <label>Cultivo</label>
-            <input
-              type="text"
-              placeholder="Ej: vid, tomate, maíz"
-              value={cropData.cultivo}
-              onChange={e => setCropData({...cropData, cultivo: e.target.value})}
-            />
-          </div>
-          <div className="input-group" style={{ flex: 1 }}>
-            <label>Problema</label>
-            <input
-              type="text"
-              placeholder="Ej: mildiu, trips, botrytis"
-              value={cropData.problema}
-              onChange={e => setCropData({...cropData, problema: e.target.value})}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="dropzone">
+      {/* ZONA HÉROE — la cámara protagonista */}
+      <div style={{
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+        borderRadius: '20px', padding: '24px 20px', marginBottom: '16px',
+        border: '2px dashed #86efac', textAlign: 'center'
+      }}>
         <input type="file" accept="image/*" capture="environment" multiple id="camera-input" hidden onChange={handleImages} />
         <input type="file" accept="image/*" multiple id="gallery-input" hidden onChange={handleImages} />
-        {images.length > 0 ? (
-          <div className="preview-grid" style={{ marginBottom: '10px' }}>
+
+        {images.length === 0 ? (
+          <>
+            <div style={{ fontSize: '3.5rem', marginBottom: '8px', lineHeight: 1 }}>📸</div>
+            <p style={{ margin: '0 0 4px', fontSize: '1.05rem', fontWeight: '700', color: '#15803d' }}>
+              Fotografía las etiquetas
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: '0.8rem', color: '#64748b' }}>
+              Mínimo 2 productos · Solo etiquetas agroquímicas
+            </p>
+          </>
+        ) : (
+          <div className="preview-grid" style={{ marginBottom: '16px', justifyContent: 'center' }}>
             {images.map((img, i) => (
               <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
                 <img src={img} className="mini-img" alt="etiqueta" />
@@ -378,42 +347,96 @@ _Conoce más en: trazza360.com_`;
               </div>
             ))}
           </div>
-        ) : (
-          !('ontouchstart' in window) && <div style={{ fontSize: '3rem', marginBottom: '6px' }}>📸</div>
         )}
-        {'ontouchstart' in window && images.length === 0 && (
-          <div style={{ marginBottom: '10px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 4px', color: '#475569', fontSize: '0.95rem', fontWeight: 'bold' }}>
-              📋 Fotografía las etiquetas de tus productos
-            </p>
-            <p style={{ margin: '0', color: '#94a3b8', fontSize: '0.8rem' }}>
-              Mínimo 2 productos • Solo etiquetas agroquímicas
-            </p>
-          </div>
-        )}
+
         {'ontouchstart' in window ? (
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
             <label htmlFor="camera-input" style={{
-              flex: 1, padding: '10px', background: '#16a34a', color: 'white',
-              borderRadius: '10px', textAlign: 'center', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold'
+              flex: 1, maxWidth: '160px', padding: '13px', background: '#16a34a', color: 'white',
+              borderRadius: '12px', textAlign: 'center', cursor: 'pointer',
+              fontSize: '0.95rem', fontWeight: '700', boxShadow: '0 4px 12px rgba(22,163,74,0.3)'
             }}>📷 Cámara</label>
             <label htmlFor="gallery-input" style={{
-              flex: 1, padding: '10px', background: '#f1f5f9', color: '#475569',
-              borderRadius: '10px', textAlign: 'center', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold',
-              border: '1px solid #cbd5e1'
+              flex: 1, maxWidth: '160px', padding: '13px', background: 'white', color: '#475569',
+              borderRadius: '12px', textAlign: 'center', cursor: 'pointer',
+              fontSize: '0.95rem', fontWeight: '600', border: '1.5px solid #cbd5e1'
             }}>🖼️ Galería</label>
           </div>
         ) : (
-          <label htmlFor="gallery-input" style={{ cursor: 'pointer', color: '#64748b', fontSize: '0.9rem' }}>
-            Clic para agregar etiquetas
+          <label htmlFor="gallery-input" style={{
+            display: 'inline-block', padding: '13px 32px',
+            background: '#16a34a', color: 'white', borderRadius: '12px',
+            cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700',
+            boxShadow: '0 4px 12px rgba(22,163,74,0.3)'
+          }}>
+            📁 Agregar etiquetas
           </label>
         )}
+
         {images.length > 0 && (
-          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-            {images.length} etiqueta(s) — {('ontouchstart' in window) ? 'toca para agregar más' : 'clic para agregar más'}
+          <p style={{ margin: '12px 0 0', color: '#64748b', fontSize: '0.8rem' }}>
+            {images.length} etiqueta(s) · toca para agregar más
           </p>
         )}
       </div>
+
+      {/* Opciones avanzadas — colapsadas */}
+      <div style={{ marginBottom: '16px' }}>
+        <button onClick={() => setShowAdvanced(v => !v)} style={{
+          width: '100%', padding: '10px 16px', background: 'white',
+          border: '1px solid #e2e8f0', borderRadius: '12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: '500'
+        }}>
+          <span>💧 ¿Conoces el pH de tu agua o tu cultivo? <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span></span>
+          <span style={{ transition: 'transform 0.2s', transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+        </button>
+
+        {showAdvanced && (
+          <div style={{
+            background: 'white', border: '1px solid #e2e8f0', borderTop: 'none',
+            borderRadius: '0 0 12px 12px', padding: '16px'
+          }}>
+            {/* Agua */}
+            <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              💧 Calidad del Agua
+            </p>
+            <div className="water-grid" style={{ marginBottom: '16px' }}>
+              <div className="input-group">
+                <label>pH</label>
+                <input type="number" step="0.1" value={waterData.ph} onChange={(e) => setWaterData({...waterData, ph: e.target.value})} />
+              </div>
+              <div className="input-group">
+                <label>CE (mS/cm)</label>
+                <input type="number" step="0.1" value={waterData.ce} onChange={(e) => setWaterData({...waterData, ce: e.target.value})} />
+              </div>
+              <div className="input-group">
+                <label>Dureza (ppm)</label>
+                <input type="number" value={waterData.hardness} onChange={(e) => setWaterData({...waterData, hardness: e.target.value})} />
+              </div>
+            </div>
+
+            {/* Cultivo y problema */}
+            <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🌱 Cultivo y Problema
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>Cultivo</label>
+                <input type="text" placeholder="vid, tomate, maíz" value={cropData.cultivo}
+                  onChange={e => setCropData({...cropData, cultivo: e.target.value})} />
+              </div>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>Problema</label>
+                <input type="text" placeholder="mildiu, trips..." value={cropData.problema}
+                  onChange={e => setCropData({...cropData, problema: e.target.value})} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+
 
       {/* Botón con estado animado */}
       <button id="btn-analyze" className="btn-analyze" onClick={analyzeMix} disabled={loading}>
