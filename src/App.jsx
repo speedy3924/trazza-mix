@@ -89,7 +89,11 @@ function App() {
       const ce = waterData.ce;
       const hardness = waterData.hardness;
       const sinDatosAgua = !ph && !ce && !hardness;
-      const esAgua_mala = !sinDatosAgua && (parseFloat(ph) > 7.5 || parseFloat(ce) > 1.5 || parseFloat(hardness) > 300);
+      const phVal = parseFloat(ph||0);
+      const ceVal = parseFloat(ce||0);
+      const hardVal = parseFloat(hardness||0);
+      const esAgua_mala = !sinDatosAgua && (phVal > 7.5 || phVal < 5.5 || ceVal > 1.5 || hardVal > 150);
+      const esAgua_critica = !sinDatosAgua && (phVal < 4.0 || ceVal > 3.0);
 
       const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
 
@@ -102,10 +106,10 @@ ${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
 - waterAlert = null. NO advertir ni regañar al usuario por no ingresar datos.
 - Aplica WALE asumiendo agua neutra (pH 7, CE normal, dureza normal).
 - En el tip, menciona brevemente que ingresar datos de agua mejora la precisión del análisis.
-- missingCorrector = false.` : `- pH: ${ph} → ${parseFloat(ph||0) > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : parseFloat(ph||0) < 6 ? '⚠️ ÁCIDA — precaución' : '✅ BUENA — no necesita corrector'}
-- CE: ${ce} mS/cm → ${parseFloat(ce||0) > 1.5 ? '⚠️ ALTA — riesgo de precipitación' : '✅ OK'}
-- Dureza: ${hardness} ppm → ${parseFloat(hardness||0) > 300 ? '⚠️ DURA — puede inactivar productos' : '✅ OK'}
-${esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante entre los productos. Si NO hay, activa missingCorrector: true.' : '✅ AGUA APTA: No se necesita corrector de pH. Los coadyuvantes/surfactantes NO son correctores de pH y van al FINAL.'}`}
+- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas, puede destruir activos y quemar cultivo' : phVal < 5.5 ? '⚠️ MUY ÁCIDA — fuera del rango seguro (5.5-7.0), ajustar antes de mezclar' : '✅ BUENA — rango seguro (5.5-7.0)'}
+- CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA — CE extremadamente alta, riesgo severo de precipitación y fitotoxicidad' : ceVal > 1.5 ? '⚠️ ALTA — riesgo de precipitación de sales' : '✅ OK'}
+- Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA — inactivación severa de activos, corrector obligatorio' : hardVal > 150 ? '⚠️ DURA — riesgo de inactivación, corrector necesario (umbral técnico: 150 ppm CaCO3)' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable (umbral conservador: 120 ppm CaCO3)' : '✅ BLANDA — sin riesgo de inactivación'}
+${esAgua_critica ? '🚨 AGUA CRÍTICA: pH o CE fuera de rango peligroso. USA status "🔴 Agua No Apta para Mezcla". Activa waterAlert con advertencia URGENTE en MAYÚSCULAS. missingCorrector: true. missingCorrectorMsg debe decir que el agua debe tratarse ANTES de cualquier mezcla.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante entre los productos. Si NO hay, activa missingCorrector: true.' : '✅ AGUA APTA: No se necesita corrector de pH. Los coadyuvantes/surfactantes NO son correctores de pH y van al FINAL.'}`}
 
 ═══ REGLAS WALE — ORDEN DE MEZCLA (INAMOVIBLES) ═══
 
@@ -136,11 +140,12 @@ INSTRUCCIONES:
 2. DOSIS: Lee la dosis DIRECTAMENTE de la etiqueta visible en la imagen. Si la dosis por 200L está clara → úsala. Si NO puedes leerla con certeza → coloca dose: "Ver etiqueta ⚠️", doseConfirm: true, y doseNote: "No pude leer la dosis con claridad — confirma con tu etiqueta física antes de aplicar." NUNCA inventes ni estimes dosis si no están claramente visibles.
 3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
 4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
+5. DUREZA DEL AGUA vs PRODUCTOS: Si la dureza es > 120 ppm, identifica cuáles de los productos presentes son sensibles a la dureza (ej: glifosato, abamectina, cobre, mancozeb) y menciona explícitamente en el waterAlert o en el doseNote cuáles se ven afectados y cómo (pérdida de eficacia, precipitación, inactivación). No hagas mención genérica — nombra los productos afectados.
 5. Adapta lenguaje al perfil del usuario arriba indicado.
 
 Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código:
 {
-  "status": "🟢 Compatible / 🟡 Precaución / 🔴 Incompatible",
+  "status": "🟢 Compatible / 🟡 Precaución / 🔴 Incompatible / 🔴 Agua No Apta para Mezcla",
   "analysis": "Máximo 2 oraciones adaptadas al perfil.",
   "waterAlert": "1 oración sobre el agua, o null si está bien",
   "missingCorrector": false,
