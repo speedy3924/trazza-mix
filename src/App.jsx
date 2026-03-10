@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -39,13 +39,12 @@ function App() {
   const [base64Images, setBase64Images] = useState([]);
   const [waterData, setWaterData] = useState({ ph: '', ce: '', hardness: '' });
   const [userType, setUserType] = useState('productor'); // 'productor' | 'ingeniero'
-  const [prevUserType, setPrevUserType] = useState('productor');
+  const userTypeRef = useRef('productor');
 
-  // Reanalizar si hay resultado activo y cambia el perfil
+  // Reanalizar automáticamente al cambiar perfil si ya hay resultado
   useEffect(() => {
-    if (result && userType !== prevUserType && base64Images.length >= 2) {
-      setPrevUserType(userType);
-      analyzeMix();
+    if (result && base64Images.length >= 2 && !loading) {
+      analyzeMixWithType(userType);
     }
   }, [userType]);
 
@@ -77,7 +76,9 @@ function App() {
     setBase64Images(prev => prev.filter((_, i) => i !== index));
   };
 
-  const analyzeMix = async () => {
+  const analyzeMix = () => analyzeMixWithType(userType);
+
+  const analyzeMixWithType = async (tipoUsuario = userType) => {
     if (base64Images.length === 0) return alert("Por favor, sube al menos una etiqueta.");
     if (base64Images.length === 1) return alert("🌱 Agrega mínimo 2 productos para analizar la compatibilidad de la mezcla.");
     setLoading(true);
@@ -92,7 +93,7 @@ function App() {
 
       const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
 
-PERFIL DEL USUARIO: ${userType === 'ingeniero'
+PERFIL DEL USUARIO: ${tipoUsuario === 'ingeniero'
   ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
   : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
 
@@ -190,7 +191,7 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       try {
         await addDoc(collection(db, 'analisis'), {
           timestamp: serverTimestamp(),
-          perfil: userType,
+          perfil: tipoUsuario,
           agua: {
             ph: waterData.ph || null,
             ce: waterData.ce || null,
@@ -238,7 +239,7 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       {/* Selector de perfil */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
         <button
-          onClick={() => setUserType('productor')}
+          onClick={() => { if (userType !== 'productor') { userTypeRef.current = 'productor'; setUserType('productor'); } }}
           style={{
             flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
             borderColor: userType === 'productor' ? '#16a34a' : '#cbd5e1',
@@ -247,10 +248,10 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
             cursor: 'pointer', fontSize: '0.9rem', color: '#15803d',
             transition: 'all 0.2s'
           }}>
-          🌾 Agricultor
+          🌾 Productor
         </button>
         <button
-          onClick={() => setUserType('ingeniero')}
+          onClick={() => { if (userType !== 'ingeniero') { userTypeRef.current = 'ingeniero'; setUserType('ingeniero'); } }}
           style={{
             flex: 1, padding: '10px', borderRadius: '10px', border: '2px solid',
             borderColor: userType === 'ingeniero' ? '#16a34a' : '#cbd5e1',
@@ -338,7 +339,7 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       </div>
 
       {/* Botón con estado animado */}
-      <button className="btn-analyze" onClick={analyzeMix} disabled={loading}>
+      <button id="btn-analyze" className="btn-analyze" onClick={analyzeMix} disabled={loading}>
         {loading ? LOADING_STEPS[loadingStep].msg : `Analizar Mezcla (${images.length})`}
       </button>
 
