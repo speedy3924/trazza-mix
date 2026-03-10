@@ -259,8 +259,9 @@ ${agua}
 *💡 Tip del Ing. William:*
 ${result.tip}
 
-🔗 Herramienta: mix.trazza360.com
-_Trazza Mix — Copiloto de Mezclas Agrícolas por Trazza360_`;
+🔗 mix.trazza360.com
+_Trazza Mix — Copiloto de Mezclas Agrícolas_
+_Conoce más en: trazza360.com_`;
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
