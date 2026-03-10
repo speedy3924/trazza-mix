@@ -93,7 +93,8 @@ function App() {
       const ceVal = parseFloat(ce||0);
       const hardVal = parseFloat(hardness||0);
       const esAgua_mala = !sinDatosAgua && (phVal > 7.5 || phVal < 5.5 || ceVal > 1.5 || hardVal > 150);
-      const esAgua_critica = !sinDatosAgua && (phVal < 4.0 || ceVal > 3.0);
+      const esAgua_critica = !sinDatosAgua && (phVal < 4.0 || phVal > 8.5 || ceVal > 3.0);
+      const statusForzado = esAgua_critica ? '🔴 Agua No Apta para Mezcla' : null;
 
       const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
 
@@ -114,9 +115,10 @@ ${esAgua_critica ? '🚨 AGUA CRÍTICA: pH o CE fuera de rango peligroso. USA st
 ═══ REGLAS WALE — ORDEN DE MEZCLA (INAMOVIBLES) ═══
 
 PASO 0 — CORRECTOR DE pH/ABLANDADOR: 
-  → SOLO si pH > 7.5 O dureza > 300 ppm Y hay un corrector entre los productos.
-  → Si el agua está bien (pH 5.5-7.5 y dureza ≤ 300): NO va ningún corrector al inicio. 
-  → Los productos como BB5, Triada-Aguas, Triple A son coadyuvantes/surfactantes cuando el agua es buena → van al FINAL (paso E).
+  → SOLO si pH > 7.5 O dureza > 150 ppm Y hay un corrector alcalinizante entre los productos.
+  → Si el agua YA es ácida (pH < 5.5): NO agregar más acidificantes al inicio. BB5, Triada-Aguas, Acidol son acidificantes — con agua ya ácida van al FINAL (paso E) o se advierten como innecesarios.
+  → Si el agua está bien (pH 5.5-7.5 y dureza ≤ 150): NO va ningún corrector al inicio.
+  → BB5, Triada-Aguas, Triple A, Acidol-5, Surfaq: con agua ALCALINA (pH > 7.5) → paso 0 (INICIO). Con agua neutra o ácida → paso E (FINAL).
 
 PASO W — AGUA: Llenar el tanque con agua (no es un producto, no listar).
 
@@ -145,7 +147,7 @@ INSTRUCCIONES:
 
 Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código:
 {
-  "status": "🟢 Compatible / 🟡 Precaución / 🔴 Incompatible / 🔴 Agua No Apta para Mezcla",
+  "status": "${statusForzado ? statusForzado : '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",  // IMPORTANTE: usa EXACTAMENTE este valor sin modificarlo
   "analysis": "Máximo 2 oraciones adaptadas al perfil.",
   "waterAlert": "1 oración sobre el agua, o null si está bien",
   "missingCorrector": false,
@@ -190,6 +192,8 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const cleanJson = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(cleanJson);
+      if (statusForzado) parsed.status = statusForzado;
+      if (esAgua_critica) parsed.missingCorrector = true;
       setResult(parsed);
 
       // Guardar en Firestore
