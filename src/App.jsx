@@ -146,6 +146,11 @@ CLASIFICACIÓN OBLIGATORIA de cada producto:
 
 INSTRUCCIONES:
 1. Identifica todos los productos de las imágenes y clasifica cada uno según su formulación.
+   INGREDIENTE ACTIVO — REGLA IGUAL QUE DOSIS:
+   → Lee el ingrediente activo DIRECTAMENTE de la etiqueta visible en la imagen.
+   → Si NO puedes leerlo con certeza → active: "Ver etiqueta", y NO compares activos entre productos ni saques conclusiones sobre duplicidad o incompatibilidad basada en activos que no pudiste leer.
+   → PROHIBIDO: asumir, inferir o recordar de memoria el activo de un producto por su nombre comercial. "Kenyo", "Quatro", "Bala" u otros — si no ves el activo en la imagen, no lo inventes.
+   → CRÍTICO: NUNCA digas que dos productos tienen el mismo activo si no pudiste leer claramente ambos activos en las imágenes. Un tip o análisis basado en activos inventados es peor que no dar ese tip.
 2. DOSIS — REGLA ABSOLUTA E INAMOVIBLE:
    → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen que te envían.
    → Si puedes leer la dosis exacta en la imagen → úsala tal cual.
