@@ -149,10 +149,12 @@ INSTRUCCIONES:
 2. DOSIS — REGLA ABSOLUTA E INAMOVIBLE:
    → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen que te envían.
    → Si puedes leer la dosis exacta en la imagen → úsala tal cual.
-   → Si NO puedes leer la dosis con total certeza → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true, doseNote: "No se pudo leer la dosis — confirma con tu etiqueta física antes de aplicar."
+   → Si NO puedes leer la dosis con total certeza → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true. NO hay doseAdjusted, NO hay estimaciones, NO hay rangos inferidos.
    → PROHIBIDO ABSOLUTAMENTE: usar tu memoria o entrenamiento para completar dosis. Esto aplica a TODOS los productos sin excepción, incluyendo productos que conoces muy bien como BB5, Triggrr, Acidol, Quatro, Hieloxil, o cualquier otro. Si no lo lees claramente en la imagen = doseConfirm: true, sin excepción.
    → CASOS CONCRETOS PROHIBIDOS: BB5 no escribas rangos de dosis si no los ves. Triggrr no escribas rangos si no los ves. Acidol no escribas rangos si no los ves. Cualquier rango que venga de tu memoria = VIOLACION GRAVE.
-   → PRUEBA MENTAL antes de escribir una dosis: La veo escrita en la imagen? Si la respuesta no es un SI rotundo → doseConfirm: true.
+   → PRUEBA MENTAL antes de escribir una dosis: ¿La veo escrita claramente en la imagen? Si la respuesta no es un SÍ rotundo → doseConfirm: true.
+   → NO EXISTE doseAdjusted. NO ajustes dosis. NO asumas volúmenes. NO calcules. Solo lees o pones Ver etiqueta.
+   → Si el usuario indicó cultivo, NO uses eso para calcular dosis — el cultivo solo sirve para el orden y el tip, nunca para inventar dosis.
 3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
 4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
 5. DUREZA DEL AGUA vs PRODUCTOS: Si la dureza es > 120 ppm, identifica cuáles de los productos presentes son sensibles a la dureza (ej: glifosato, abamectina, cobre, mancozeb) y menciona explícitamente en el waterAlert o en el doseNote cuáles se ven afectados y cómo (pérdida de eficacia, precipitación, inactivación). No hagas mención genérica — nombra los productos afectados.
@@ -169,10 +171,9 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
     {
       "name": "Nombre comercial",
       "active": "Ingrediente activo",
-      "dose": "Dosis por 200L ej: 400 g/200L",
-      "doseAdjusted": "Dosis ajustada si aplica, sino igual a dose",
+      "dose": "Dosis EXACTAMENTE como aparece en la etiqueta visible. Si no la ves claramente: Ver etiqueta ⚠️",
       "doseConfirm": false,
-      "doseNote": "1 oración de razón o null"
+      "doseNote": null
     }
   ],
   "order": ["1. Nombre (dosis): razón en 1 oración"],
@@ -521,11 +522,7 @@ _Conoce más en: trazza360.com_`;
                   ) : (
                     <p style={{ margin: '0 0 2px', fontSize: '0.85rem' }}>Dosis: <strong>{p.dose}</strong></p>
                   )}
-                  {p.doseAdjusted && p.doseAdjusted !== p.dose && (
-                    <p style={{ margin: '0 0 2px', fontSize: '0.85rem', color: '#b45309' }}>
-                      ⚠️ Dosis ajustada: <strong>{p.doseAdjusted}</strong>
-                    </p>
-                  )}
+
                   {p.doseNote && !p.doseConfirm && (
                     <p style={{ margin: '0', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>{p.doseNote}</p>
                   )}
