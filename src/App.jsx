@@ -102,50 +102,46 @@ function App() {
       // Gemini ve imágenes UNA sola vez. Más rápido, sin timeout.
       // Las garantías JS corrigen cualquier alucinación post-respuesta.
       // ═══════════════════════════════════════════════════
-      const prompt = `Eres Trazza Mix, el copiloto agronómico de Trazza360.
-
-═══ REGLA ABSOLUTA — LECTURA DE ETIQUETAS ═══
-Esta regla tiene PRIORIDAD MÁXIMA sobre todo lo demás, incluyendo el perfil del usuario.
-Para los campos name, active, formulation y dose: SOLO escribes lo que ves impreso en la imagen.
-NO importa si eres ingeniero o agricultor — la lectura es siempre igual: texto visible = dato, no visible = NO_LEGIBLE.
-El perfil del usuario SOLO afecta cómo redactas analysis, waterAlert y tip. NUNCA afecta los datos leídos.
-
-Para cada etiqueta extrae:
-- name: nombre comercial visible
-- active: ingrediente activo visible → si no lo ves con certeza: "NO_LEGIBLE"
-- formulation: tipo de formulación visible (WP, EC, SL, SC, WG...) → si no la ves: "NO_LEGIBLE"
-- dose: dosis visible → si no la ves claramente: "NO_LEGIBLE"
-
-PERFIL (solo para redacción de textos): ${tipoUsuario === 'ingeniero'
-  ? 'INGENIERO AGRÓNOMO — usa terminología técnica en analysis, waterAlert y tip: hidrólisis alcalina, CE, precipitación de sales, WP/EC/SL.'
-  : 'AGRICULTOR — redacta analysis, waterAlert y tip muy breve, sin tecnicismos. "Tu agua está bien", "Agrégalo primero".'}
+      const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
 
 CULTIVO: ${cropData.cultivo || 'No especificado'}
-PROBLEMA: ${cropData.problema || 'No especificado'}
+PROBLEMA FITOSANITARIO: ${cropData.problema || 'No especificado'}
+${cropData.cultivo || cropData.problema ? '→ Adapta las recomendaciones al cultivo y problema indicados.' : '→ Sin cultivo/problema especificado, da recomendaciones generales.'}
 
-AGUA:
-${sinDatosAgua
-  ? 'Sin datos. Asume agua neutra. Acidificantes/correctores van al FINAL.'
-  : `pH: ${ph} → ${phVal > 8.5 ? '🚨 CRÍTICO extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINO — requiere corrector' : phVal < 4.0 ? '🚨 CRÍTICO extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDO' : phVal < 5.5 ? '⚠️ LÍMITE inferior' : '✅ ÓPTIMO'}
-CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA' : ceVal > 1.5 ? '⚠️ ALTA' : '✅ OK'}
-Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA' : '✅ BLANDA'}
-${esAgua_critica ? '→ AGUA CRÍTICA: status = "🔴 Agua No Apta para Mezcla". waterAlert URGENTE en mayúsculas.' : esAgua_mala ? '→ AGUA PROBLEMÁTICA: si no hay corrector → missingCorrector: true.' : '→ AGUA APTA: coadyuvantes NO son correctores, van al FINAL.'}`}
+PERFIL DEL USUARIO: ${tipoUsuario === 'ingeniero'
+  ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
+  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos".'}
 
-ORDEN WALE:
-PASO 0 — Correctores pH/ablandadores: SOLO si pH>7.5 o dureza>150ppm. Agua normal o sin datos → van al FINAL.
-PASO A — Sólidos WP/WG/SP → primero siempre
-PASO L — Líquidos SL/EC/SC/SE/OD → después de sólidos
-PASO E — Coadyuvantes/surfactantes/aceites → SIEMPRE al final sin excepción
+DATOS DEL AGUA:
+${sinDatosAgua ? `SIN DATOS (campo opcional):
+- waterAlert = null.
+- Aplica WALE asumiendo agua neutra (pH 7).
+- Acidificantes/correctores → FINAL por precaución.
+- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 8.5 ? '🚨 CRÍTICO — extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINA — REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDA' : phVal < 5.5 ? '⚠️ LÍMITE INFERIOR' : '✅ BUENA — rango óptimo 5.5-7.5'}
+- CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA' : ceVal > 1.5 ? '⚠️ ALTA — riesgo precipitación' : '✅ OK'}
+- Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA' : '✅ BLANDA'}
+${esAgua_critica ? '🚨 AGUA CRÍTICA: status = "🔴 Agua No Apta para Mezcla". waterAlert URGENTE. missingCorrector: true.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: si no hay corrector → missingCorrector: true.' : '✅ AGUA APTA: coadyuvantes NO son correctores, van al FINAL.'}`}
+
+═══ REGLAS WALE ═══
+PASO 0 — Correctores pH/ablandadores: SOLO si pH>7.5 o dureza>150ppm. Agua normal o sin datos → FINAL.
+PASO A — Sólidos WP/WG/SP → siempre primero.
+PASO L — Líquidos SL/EC/SC/SE/OD → después de sólidos.
+PASO E — Coadyuvantes/surfactantes/aceites → SIEMPRE al final sin excepción.
+
+INSTRUCCIONES DE LECTURA — PRIORIDAD MÁXIMA:
+Para CADA producto en las imágenes, extrae name, active, formulation y dose ÚNICAMENTE leyendo el texto visible en la etiqueta.
+Esta regla aplica IGUAL para todos los perfiles (productor e ingeniero): el perfil solo cambia cómo redactas el análisis, NUNCA los datos leídos.
+→ active: lee el ingrediente activo impreso. Si no lo ves claramente → "Ver etiqueta ⚠️"
+→ dose: lee la dosis impresa. Si no la ves claramente → "Ver etiqueta ⚠️", doseConfirm: true
+→ PROHIBIDO completar active o dose con memoria o conocimiento previo, sin importar el perfil.
 
 COMPATIBILIDAD:
-→ Mismo activo en 2 productos (AMBOS legibles) = 🔴 sobredosis
-→ Si algún activo es NO_LEGIBLE = no afirmes incompatibilidad, indica precaución
-→ Incompatibilidades químicas reales (cobre+aceite, azufre+aceite en calor) = 🟡 Precaución
-→ Dureza >120ppm: menciona explícitamente qué activos legibles se ven afectados
+→ Mismo activo en 2 productos (ambos legibles y coinciden) = 🔴 sobredosis
+→ Si algún activo dice "Ver etiqueta ⚠️" = NO afirmes incompatibilidad por activos
+→ Incompatibilidades reales (cobre+aceite, azufre+aceite en calor) = 🟡 Precaución
+→ Dureza >120ppm: menciona qué activos legibles se ven afectados por nombre
 
-DOSIS: Si leíste la dosis en la imagen → úsala. Si fue NO_LEGIBLE → doseConfirm: true, dose: "Ver etiqueta ⚠️". NUNCA completes dosis de memoria.
-
-Responde ÚNICAMENTE en JSON exacto:
+Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
 {
   "status": "${statusForzado || '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",
   "analysis": "1-2 oraciones adaptadas al perfil",
@@ -155,8 +151,8 @@ Responde ÚNICAMENTE en JSON exacto:
   "products": [
     {
       "name": "nombre comercial",
-      "active": "activo leído — si NO_LEGIBLE: Ver etiqueta ⚠️",
-      "dose": "dosis leída — si NO_LEGIBLE: Ver etiqueta ⚠️",
+      "active": "activo leído de la etiqueta — si no legible: Ver etiqueta ⚠️",
+      "dose": "dosis leída de la etiqueta — si no legible: Ver etiqueta ⚠️",
       "doseConfirm": false,
       "doseNote": null
     }
