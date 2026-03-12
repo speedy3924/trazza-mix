@@ -97,153 +97,199 @@ function App() {
       const esAgua_critica = !sinDatosAgua && (phVal < 4.0 || phVal > 8.5 || ceVal > 3.0);
       const statusForzado = esAgua_critica ? '🔴 Agua No Apta para Mezcla' : null;
 
-      const prompt = `Eres Trazza Mix, el asistente agrónomo inteligente de Trazza360. Analizas agroquímicos de cualquier país del mundo con criterio técnico universal.
+      // ═══════════════════════════════════════════════════
+      // LLAMADA 1 — OCR PURO: solo extrae texto de imágenes
+      // ═══════════════════════════════════════════════════
+      const promptOCR = `Eres un escáner OCR especializado en etiquetas agroquímicas. Tu única función es extraer texto visible.
+
+TAREA: Para cada etiqueta en las imágenes, extrae ÚNICAMENTE el texto que puedes leer visualmente.
+
+Para cada producto retorna un objeto con estos campos — SOLO con lo que lees en la imagen:
+- name: nombre comercial visible
+- active: ingrediente(s) activo(s) visible(s). Si no lo ves claramente → "NO_LEGIBLE"
+- formulation: tipo de formulación visible (WP, EC, SL, SC, etc). Si no la ves → "NO_LEGIBLE"  
+- dose: dosis visible en la etiqueta. Si no la ves claramente → "NO_LEGIBLE"
+- otherText: cualquier otro texto relevante visible (concentración, registro, fabricante)
+
+REGLAS ABSOLUTAS:
+→ Solo texto visible en la imagen. Cero inferencias. Cero memoria. Cero conocimiento previo.
+→ Si un campo no es legible → "NO_LEGIBLE". Nunca dejes un campo vacío con datos inventados.
+→ No sabes qué producto es. No tienes contexto. Solo lees píxeles.
+
+Responde ÚNICAMENTE en JSON:
+{"productos": [{"name":"...","active":"...","formulation":"...","dose":"...","otherText":"..."}]}`;
+
+      const ocrResponse = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptOCR }, ...base64Images.map(img => ({ inlineData: img.inlineData }))] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 2048 }
+        })
+      });
+
+      if (!ocrResponse.ok) throw new Error(`OCR HTTP ${ocrResponse.status}`);
+      const ocrData = await ocrResponse.json();
+      const ocrText = ocrData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const ocrClean = ocrText.replace(/```json|```/g, '').trim();
+      const ocrParsed = JSON.parse(ocrClean);
+      const productosLeidos = ocrParsed.productos || [];
+
+      // ═══════════════════════════════════════════════════
+      // LLAMADA 2 — RAZONAMIENTO WALE: sin imágenes, solo datos OCR
+      // ═══════════════════════════════════════════════════
+      // ═══════════════════════════════════════════════════════════════
+      // CAPA JS: Validaciones duras que Gemini NO decide
+      // ═══════════════════════════════════════════════════════════════
+      const detectarDuplicados = (productos) => {
+        const dupes = [];
+        for (let i = 0; i < productos.length; i++) {
+          for (let j = i + 1; j < productos.length; j++) {
+            const a1 = (productos[i].active || '').trim().toUpperCase();
+            const a2 = (productos[j].active || '').trim().toUpperCase();
+            const legible = (a) => a && a !== 'NO_LEGIBLE' && !a.includes('VER ETIQUETA');
+            if (legible(a1) && legible(a2) && a1 === a2) {
+              dupes.push(`${productos[i].name} y ${productos[j].name} tienen el mismo activo: ${productos[i].active}`);
+            }
+          }
+        }
+        return dupes;
+      };
+
+      // ═══════════════════════════════════════════════════════════════
+      // LLAMADA 2 — GEMINI RAZONA: recibe texto OCR, sin imágenes
+      // Sin imágenes = sin reconocimiento de marca = sin alucinaciones
+      // Gemini hace el razonamiento agronómico completo con datos limpios
+      // ═══════════════════════════════════════════════════════════════
+      const promptRazonamiento = `Eres Trazza Mix, el motor agronómico de Trazza360.
+Recibes texto extraído por OCR de etiquetas físicas. NO tienes imágenes. NO tienes contexto visual.
+Solo existen los datos de texto que te entrego abajo. Nada más.
+
+DATOS EXTRAÍDOS POR OCR (lo que literalmente dice cada etiqueta):
+${JSON.stringify(productosLeidos, null, 2)}
+
+REGLA ABSOLUTA DE DATOS:
+→ Cualquier campo que diga "NO_LEGIBLE" = ese dato no existe. No lo completes, no lo inferes, no lo recuerdas.
+→ Si active = "NO_LEGIBLE" → en tu respuesta pon active: "Ver etiqueta ⚠️"
+→ Si dose = "NO_LEGIBLE" → en tu respuesta pon dose: "Ver etiqueta ⚠️", doseConfirm: true
+→ NUNCA uses tu conocimiento de entrenamiento para completar campos NO_LEGIBLE. Si no está en los datos OCR, no existe.
 
 CULTIVO: ${cropData.cultivo || 'No especificado'}
-PROBLEMA FITOSANITARIO: ${cropData.problema || 'No especificado'}
-${cropData.cultivo || cropData.problema ? '→ Adapta las recomendaciones de dosis y compatibilidad al cultivo y problema indicados.' : '→ Sin cultivo/problema especificado, da recomendaciones generales.'}
+PROBLEMA: ${cropData.problema || 'No especificado'}
 
-PERFIL DEL USUARIO: ${tipoUsuario === 'ingeniero'
-  ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
-  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
+PERFIL: ${tipoUsuario === 'ingeniero'
+  ? 'INGENIERO AGRÓNOMO — terminología técnica: hidrólisis alcalina, CE, precipitación de sales, WP/EC/SL.'
+  : 'AGRICULTOR — muy breve, sin tecnicismos. "Tu agua está bien", "Agrégalo primero". Máximo 1 oración por campo.'}
 
 DATOS DEL AGUA:
-${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
-- waterAlert = null. NO advertir ni regañar al usuario por no ingresar datos.
-- Aplica WALE asumiendo agua neutra (pH 7, CE normal, dureza normal).
-- BB5, Acidol, Triada-Aguas, Triple A y similares: sin datos de agua → van al FINAL (paso E) por precaución, asumiendo agua neutra. En el orden WALE explica: "Va al final porque sin datos del agua asumimos pH neutro, por lo que no se necesita como corrector al inicio."
-- En el tip, menciona brevemente que ingresar datos de agua mejora la precisión del análisis.
-- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas, puede destruir activos y quemar cultivo' : phVal < 5.0 ? '⚠️ ÁCIDA — pH bajo (rango óptimo 5.5-7.0), puede afectar algunos activos' : phVal < 5.5 ? '⚠️ LIGERAMENTE ÁCIDA — pH aceptable pero en límite inferior, monitorear' : '✅ BUENA — rango seguro (5.5-7.0)'}
-- CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA — CE extremadamente alta, riesgo severo de precipitación y fitotoxicidad' : ceVal > 1.5 ? '⚠️ ALTA — riesgo de precipitación de sales' : '✅ OK'}
-- Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA — inactivación severa de activos, corrector obligatorio' : hardVal > 150 ? '⚠️ DURA — riesgo de inactivación, corrector necesario (umbral técnico: 150 ppm CaCO3)' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable (umbral conservador: 120 ppm CaCO3)' : '✅ BLANDA — sin riesgo de inactivación'}
-${esAgua_critica ? '🚨 AGUA CRÍTICA: pH o CE fuera de rango peligroso. USA status "🔴 Agua No Apta para Mezcla". Activa waterAlert con advertencia URGENTE en MAYÚSCULAS. missingCorrector: true. missingCorrectorMsg debe decir que el agua debe tratarse ANTES de cualquier mezcla.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector/acidificante entre los productos. Si NO hay, activa missingCorrector: true.' : '✅ AGUA APTA: No se necesita corrector de pH. Los coadyuvantes/surfactantes NO son correctores de pH y van al FINAL.'}`}
+${sinDatosAgua
+  ? `Sin datos de agua ingresados. Asume agua neutra. Acidificantes/correctores van al FINAL por precaución.`
+  : `pH: ${ph} (${phVal > 8.5 ? '🚨 CRÍTICO — extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINO — requiere corrector' : phVal < 4.0 ? '🚨 CRÍTICO — extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDO — puede dañar activos' : phVal < 5.5 ? '⚠️ LÍMITE inferior del rango óptimo' : '✅ ÓPTIMO 5.5-7.5'})
+CE: ${ce} mS/cm (${ceVal > 3.0 ? '🚨 CRÍTICA — riesgo severo precipitación' : ceVal > 1.5 ? '⚠️ ALTA — riesgo precipitación de sales' : '✅ OK'})
+Dureza: ${hardness} ppm (${hardVal > 300 ? '🚨 MUY DURA — inactivación severa' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable' : '✅ BLANDA'})
+${esAgua_critica ? '→ AGUA CRÍTICA: status debe ser "🔴 Agua No Apta para Mezcla". waterAlert en MAYÚSCULAS urgente.' : aguaMalaMotor ? '→ AGUA PROBLEMÁTICA: si no hay corrector entre los productos → missingCorrector: true.' : '→ AGUA APTA: coadyuvantes y surfactantes NO son correctores, van al FINAL.'}`}
 
-═══ REGLAS WALE — ORDEN DE MEZCLA (INAMOVIBLES) ═══
+═══ ALGORITMO WALE — ORDEN OBLIGATORIO ═══
 
-PASO 0 — CORRECTOR DE pH/ABLANDADOR: 
-  → SOLO si pH > 7.5 O dureza > 150 ppm Y hay un corrector alcalinizante entre los productos.
-  → Si el agua está bien (pH 5.0-7.5 y dureza ≤ 150): NO va ningún corrector al inicio.
-  → Si el agua YA es ácida (pH < 5.0): NO agregar más acidificantes. BB5, Triada-Aguas, Acidol van al FINAL.
-  → BB5, Triada-Aguas, Triple A, Acidol-5, Surfaq: con agua ALCALINA (pH > 7.5) → paso 0 (INICIO). Con agua neutra o ácida → paso E (FINAL).
-  → IMPORTANTE: pH entre 5.0-5.5 es PRECAUCIÓN LEVE — no es agua crítica, no exageres la alerta. Solo menciona que está en el límite inferior del rango óptimo.
+Clasifica cada producto por su formulación (léela del campo formulation del OCR) y ordénalo:
+PASO 0: Correctores de pH / ablandadores → SOLO si agua alcalina (pH>7.5) o muy dura (>150ppm). Si agua normal o sin datos → van al FINAL.
+PASO A: WP, WG, SP (sólidos) → siempre antes que líquidos
+PASO L: SL, EC, SC, SE, OD (líquidos) → después de sólidos  
+PASO E: Coadyuvantes, surfactantes, aceites, adherentes → SIEMPRE al final sin excepción
 
-PASO W — AGUA: Llenar el tanque con agua (no es un producto, no listar).
+COMPATIBILIDAD — razona con los activos que puedas leer:
+→ Mismo activo en 2 productos (ambos legibles) = 🔴 sobredosis
+→ Incompatibilidades conocidas (cobre+aceite, azufre+aceite en calor, etc.) = 🟡 Precaución
+→ Si algún activo es NO_LEGIBLE = no puedes afirmar incompatibilidad por activos, indica precaución
 
-PASO A — AGENTES SÓLIDOS (WP, WG, SP): Polvos mojables y granulados dispersables. Siempre antes que líquidos.
+DUREZA Y ACTIVOS SENSIBLES: Si dureza > 120ppm, menciona explícitamente qué activos legibles se ven afectados (glifosato, abamectina, cobre, mancozeb son sensibles). Nómbralos, no hagas mención genérica.
 
-PASO L — LÍQUIDOS (SL, EC, SC, SE, OD): Concentrados solubles, emulsionables y suspensiones. Después de los sólidos.
-
-PASO E — EXTRAS/COADYUVANTES: Surfactantes, aceites, humectantes, adherentes. SIEMPRE AL FINAL sin excepción.
-
-CLASIFICACIÓN OBLIGATORIA de cada producto:
-- WP / PM (polvo mojable) → paso A
-- WG / WDG (granulado dispersable) → paso A  
-- SL (concentrado soluble) → paso L
-- EC (concentrado emulsionable) → paso L
-- SC / SE / OD (suspensión/emulsión) → paso L
-- Coadyuvante / surfactante / aceite / adherente / humectante → paso E (FINAL)
-- Corrector pH / acidificante / ablandador → paso 0 (SOLO si agua mala)
-
-INSTRUCCIONES:
-1. Identifica todos los productos de las imágenes y clasifica cada uno según su formulación.
-   INGREDIENTE ACTIVO — REGLA IGUAL QUE DOSIS:
-   → Lee el ingrediente activo DIRECTAMENTE de la etiqueta visible en la imagen.
-   → Si NO puedes leerlo con certeza → active: "Ver etiqueta", y NO compares activos entre productos ni saques conclusiones sobre duplicidad o incompatibilidad basada en activos que no pudiste leer.
-   → PROHIBIDO: asumir, inferir o recordar de memoria el activo de un producto por su nombre comercial. "Kenyo", "Quatro", "Bala" u otros — si no ves el activo en la imagen, no lo inventes.
-   → CRÍTICO: NUNCA digas que dos productos tienen el mismo activo si no pudiste leer claramente ambos activos en las imágenes. Un tip o análisis basado en activos inventados es peor que no dar ese tip.
-2. DOSIS — REGLA ABSOLUTA E INAMOVIBLE:
-   → SOLO acepta dosis que estén VISIBLEMENTE IMPRESAS en la etiqueta de la imagen que te envían.
-   → Si puedes leer la dosis exacta en la imagen → úsala tal cual.
-   → Si NO puedes leer la dosis con total certeza → OBLIGATORIO: dose: "Ver etiqueta ⚠️", doseConfirm: true. NO hay doseAdjusted, NO hay estimaciones, NO hay rangos inferidos.
-   → PROHIBIDO ABSOLUTAMENTE: usar tu memoria o entrenamiento para completar dosis. Esto aplica a TODOS los productos sin excepción, incluyendo productos que conoces muy bien como BB5, Triggrr, Acidol, Quatro, Hieloxil, o cualquier otro. Si no lo lees claramente en la imagen = doseConfirm: true, sin excepción.
-   → CASOS CONCRETOS PROHIBIDOS: BB5 no escribas rangos de dosis si no los ves. Triggrr no escribas rangos si no los ves. Acidol no escribas rangos si no los ves. Cualquier rango que venga de tu memoria = VIOLACION GRAVE.
-   → PRUEBA MENTAL antes de escribir una dosis: ¿La veo escrita claramente en la imagen? Si la respuesta no es un SÍ rotundo → doseConfirm: true.
-   → NO EXISTE doseAdjusted. NO ajustes dosis. NO asumas volúmenes. NO calcules. Solo lees o pones Ver etiqueta.
-   → Si el usuario indicó cultivo, NO uses eso para calcular dosis — el cultivo solo sirve para el orden y el tip, nunca para inventar dosis.
-3. Aplica WALE estrictamente según clasificación. Si el agua es buena, BB5 u otros coadyuvantes van al FINAL.
-4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
-5. DUREZA DEL AGUA vs PRODUCTOS: Si la dureza es > 120 ppm, identifica cuáles de los productos presentes son sensibles a la dureza (ej: glifosato, abamectina, cobre, mancozeb) y menciona explícitamente en el waterAlert o en el doseNote cuáles se ven afectados y cómo (pérdida de eficacia, precipitación, inactivación). No hagas mención genérica — nombra los productos afectados.
-5. Adapta lenguaje al perfil del usuario arriba indicado.
-
-Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código:
+Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
 {
-  "status": "${statusForzado ? statusForzado : '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",  // IMPORTANTE: usa EXACTAMENTE este valor sin modificarlo
-  "analysis": "Máximo 2 oraciones adaptadas al perfil.",
-  "waterAlert": "1 oración sobre el agua, o null si está bien",
+  "status": "${statusForzado || '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible — elige el correcto'}",
+  "analysis": "1-2 oraciones adaptadas al perfil del usuario",
+  "waterAlert": "1 oración sobre el agua o null",
   "missingCorrector": false,
-  "missingCorrectorMsg": "1 oración urgente si falta corrector, o null",
+  "missingCorrectorMsg": "1 oración urgente o null",
   "products": [
     {
-      "name": "Nombre comercial",
-      "active": "Ingrediente activo",
-      "dose": "Dosis EXACTAMENTE como aparece en la etiqueta visible. Si no la ves claramente: Ver etiqueta ⚠️",
+      "name": "nombre del OCR",
+      "active": "activo del OCR — si NO_LEGIBLE: Ver etiqueta ⚠️",
+      "dose": "dosis del OCR — si NO_LEGIBLE: Ver etiqueta ⚠️",
       "doseConfirm": false,
       "doseNote": null
     }
   ],
-  "order": ["1. Nombre (dosis): razón en 1 oración"],
-  "tip": "1 consejo específico del Ing. William para ESTA mezcla con ESTA agua"
+  "order": ["1. Nombre (dosis): razón WALE en 1 oración"],
+  "tip": "1 consejo práctico específico del Ing. William para ESTA mezcla y ESTA agua"
 }`;
-
-      const parts = [
-        { text: prompt },
-        ...base64Images.map(img => ({ inlineData: img.inlineData }))
-      ];
 
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 8192,
-          }
+          contents: [{ parts: [{ text: promptRazonamiento }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 4096 }
         })
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || `HTTP ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleanJson = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(cleanJson);
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      // GARANTÍAS FINALES EN CÓDIGO — incondicionales
+      // 1. Duplicados detectados matemáticamente → siempre rojo
+      const duplicados = detectarDuplicados(parsed.products || []);
+      if (duplicados.length > 0) {
+        parsed.status = '🔴 Ingredientes duplicados — riesgo de sobredosis';
+        parsed.analysis = `⚠️ ${duplicados.join('. ')}. Usar ambos es sobredosis — elige uno solo. ` + (parsed.analysis || '');
+      }
+      // 2. Agua crítica → siempre rojo sin importar lo que diga Gemini
       if (statusForzado) parsed.status = statusForzado;
-      if (esAgua_critica) parsed.missingCorrector = true;
+      // 3. Productos con doseConfirm → garantizar que no muestren dosis inventada
+      if (parsed.products) {
+        parsed.products = parsed.products.map((p, i) => {
+          const ocrP = productosLeidos[i] || {};
+          const doseNoLegible = !ocrP.dose || ocrP.dose === 'NO_LEGIBLE';
+          const activeNoLegible = !ocrP.active || ocrP.active === 'NO_LEGIBLE';
+          return {
+            ...p,
+            dose: doseNoLegible ? 'Ver etiqueta ⚠️' : p.dose,
+            doseConfirm: doseNoLegible,
+            active: activeNoLegible ? 'Ver etiqueta ⚠️' : p.active,
+          };
+        });
+      }
+
       setResult(parsed);
 
       // Guardar en Firestore
       try {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         await addDoc(collection(db, 'analisis'), {
           timestamp: serverTimestamp(),
           perfil: tipoUsuario,
-          agua: {
-            ph: waterData.ph || null,
-            ce: waterData.ce || null,
-            dureza: waterData.hardness || null,
-          },
-          cultivo: cropData.cultivo || null,
-          problema: cropData.problema || null,
-          productos: parsed.products?.map(p => p.name) || [],
-          formulaciones: parsed.products?.map(p => p.active) || [],
-          cantidadProductos: base64Images.length,
-          status: parsed.status || null,
-          waterAlert: parsed.waterAlert || null,
-          missingCorrector: parsed.missingCorrector || false,
-          ordenMezcla: parsed.order || [],
-          paisRegion: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
-          idiomaBrowser: navigator.language || null,
+          agua: { ph: ph||null, ce: ce||null, dureza: hardness||null },
+          cultivo: cropData.cultivo||null,
+          problema: cropData.problema||null,
+          productos: (parsed.products||[]).map(p => p.name),
+          formulaciones: (parsed.products||[]).map(p => p.active),
+          cantidadProductos: (parsed.products||[]).length,
+          status: parsed.status,
+          waterAlert: parsed.waterAlert||null,
+          missingCorrector: parsed.missingCorrector||false,
+          ordenMezcla: parsed.order||[],
+          duplicados: duplicados.length > 0 ? duplicados : null,
+          paisRegion: timezone,
+          idiomaBrowser: navigator.language,
         });
-      } catch (fbError) {
-        console.warn('Firebase error (no critico):', fbError);
-      }
+      } catch (fbErr) { console.warn('Firestore error:', fbErr); }
 
-    } catch (error) {
-      console.error("ERROR REAL:", error);
-      alert("Error: " + error.message);
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Error al analizar. Verifica tu conexión e intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -251,33 +297,13 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código
 
   const shareWhatsApp = () => {
     if (!result) return;
-    const productos = result.products?.map(p => `• ${p.name}${p.dose && !p.doseConfirm ? ' — ' + p.dose : ''}`).join('\n') || '';
-    const orden = result.order?.map((s, i) => `${i+1}. ${s.replace(/✅\s*/,'')}`).join('\n') || '';
-    const agua = waterData.ph || waterData.ce || waterData.hardness
-      ? `pH: ${waterData.ph||'—'} | CE: ${waterData.ce||'—'} mS/cm | Dureza: ${waterData.hardness||'—'} ppm`
-      : 'No ingresada';
-    const msg = `🌱 *Simulación de mezcla — Trazza Mix*
-
-*Estado:* ${result.status}
-
-*Productos:*
-${productos}
-
-*Orden de mezcla (WALE):*
-${orden}
-
-*Calidad del agua:*
-${agua}
-
-*💡 Tip del Ing. William:*
-${result.tip}
-
-🔗 mix.trazza360.com
-_Trazza Mix — Copiloto de Mezclas Agrícolas_
-_Conoce más en: trazza360.com_`;
+    const productos = result.products?.map(p => `• ${p.name}: ${p.doseConfirm ? 'Ver etiqueta ⚠️' : p.dose}`).join('\n') || '';
+    const orden = result.order?.map((s, i) => `${i+1}. ${s.replace(/^\d+\.\s*/, '')}`).join('\n') || '';
+    const msg = `🌱 *Análisis de mezcla — Trazza Mix*\n\n*Status:* ${result.status}\n\n*Productos:*\n${productos}\n\n*Orden WALE:*\n${orden}\n\n💡 *Tip:* ${result.tip}\n\n🔗 mix.trazza360.com\n_Trazza Mix — Copiloto de Mezclas Agrícolas_\n_Conoce más en: trazza360.com_`;
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
+
 
   const resetApp = () => {
     setImages([]);
