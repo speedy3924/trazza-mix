@@ -98,49 +98,100 @@ function App() {
       const statusForzado = esAgua_critica ? '🔴 Agua No Apta para Mezcla' : null;
 
       // ═══════════════════════════════════════════════════
-      // LLAMADA 1 — OCR PURO: solo extrae texto de imágenes
+      // LLAMADA ÚNICA — OCR + RAZONAMIENTO WALE en 1 paso
+      // Gemini ve imágenes UNA sola vez. Más rápido, sin timeout.
+      // Las garantías JS corrigen cualquier alucinación post-respuesta.
       // ═══════════════════════════════════════════════════
-      const promptOCR = `Eres un escáner OCR especializado en etiquetas agroquímicas. Tu única función es extraer texto visible.
+      const prompt = `Eres Trazza Mix, el copiloto agronómico de Trazza360.
+Analiza las etiquetas de las imágenes adjuntas. Sigue este proceso en orden estricto:
 
-TAREA: Para cada etiqueta en las imágenes, extrae ÚNICAMENTE el texto que puedes leer visualmente.
+FASE 1 — LECTURA OCR (antes de razonar):
+Para cada etiqueta, lee visualmente:
+- Nombre comercial
+- Ingrediente activo → si no lo ves con certeza: "NO_LEGIBLE"
+- Formulación (WP, EC, SL, SC, WG, etc.) → si no la ves: "NO_LEGIBLE"
+- Dosis → si no la ves claramente: "NO_LEGIBLE"
 
-Para cada producto retorna un objeto con estos campos — SOLO con lo que lees en la imagen:
-- name: nombre comercial visible
-- active: ingrediente(s) activo(s) visible(s). Si no lo ves claramente → "NO_LEGIBLE"
-- formulation: tipo de formulación visible (WP, EC, SL, SC, etc). Si no la ves → "NO_LEGIBLE"  
-- dose: dosis visible en la etiqueta. Si no la ves claramente → "NO_LEGIBLE"
-- otherText: cualquier otro texto relevante visible (concentración, registro, fabricante)
+REGLA DE ORO FASE 1: Lo que no puedes leer en la imagen = NO_LEGIBLE.
+Tu memoria de entrenamiento no existe para esta fase. No completes campos con lo que "sabes" del producto.
 
-REGLAS ABSOLUTAS:
-→ Solo texto visible en la imagen. Cero inferencias. Cero memoria. Cero conocimiento previo.
-→ Si un campo no es legible → "NO_LEGIBLE". Nunca dejes un campo vacío con datos inventados.
-→ No sabes qué producto es. No tienes contexto. Solo lees píxeles.
+FASE 2 — RAZONAMIENTO (solo con lo leído en Fase 1):
+Con los datos extraídos, aplica:
 
-Responde ÚNICAMENTE en JSON:
-{"productos": [{"name":"...","active":"...","formulation":"...","dose":"...","otherText":"..."}]}`;
+PERFIL: ${tipoUsuario === 'ingeniero'
+  ? 'INGENIERO AGRÓNOMO — terminología técnica: hidrólisis alcalina, CE, precipitación de sales, WP/EC/SL.'
+  : 'AGRICULTOR — muy breve, sin tecnicismos. 1 oración por campo. "Tu agua está bien", "Agrégalo primero".'}
 
-      const ocrResponse = await fetch(API_URL, {
+CULTIVO: ${cropData.cultivo || 'No especificado'}
+PROBLEMA: ${cropData.problema || 'No especificado'}
+
+AGUA:
+${sinDatosAgua
+  ? 'Sin datos. Asume agua neutra. Acidificantes/correctores van al FINAL.'
+  : `pH: ${ph} → ${phVal > 8.5 ? '🚨 CRÍTICO extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINO — requiere corrector' : phVal < 4.0 ? '🚨 CRÍTICO extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDO' : phVal < 5.5 ? '⚠️ LÍMITE inferior' : '✅ ÓPTIMO'}
+CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA' : ceVal > 1.5 ? '⚠️ ALTA' : '✅ OK'}
+Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA' : '✅ BLANDA'}
+${esAgua_critica ? '→ AGUA CRÍTICA: status = "🔴 Agua No Apta para Mezcla". waterAlert URGENTE en mayúsculas.' : esAgua_mala ? '→ AGUA PROBLEMÁTICA: si no hay corrector → missingCorrector: true.' : '→ AGUA APTA: coadyuvantes NO son correctores, van al FINAL.'}`}
+
+ORDEN WALE:
+PASO 0 — Correctores pH/ablandadores: SOLO si pH>7.5 o dureza>150ppm. Agua normal o sin datos → van al FINAL.
+PASO A — Sólidos WP/WG/SP → primero siempre
+PASO L — Líquidos SL/EC/SC/SE/OD → después de sólidos
+PASO E — Coadyuvantes/surfactantes/aceites → SIEMPRE al final sin excepción
+
+COMPATIBILIDAD:
+→ Mismo activo en 2 productos (AMBOS legibles) = 🔴 sobredosis
+→ Si algún activo es NO_LEGIBLE = no afirmes incompatibilidad, indica precaución
+→ Incompatibilidades químicas reales (cobre+aceite, azufre+aceite en calor) = 🟡 Precaución
+→ Dureza >120ppm: menciona explícitamente qué activos legibles se ven afectados
+
+DOSIS: Si leíste la dosis en la imagen → úsala. Si fue NO_LEGIBLE → doseConfirm: true, dose: "Ver etiqueta ⚠️". NUNCA completes dosis de memoria.
+
+Responde ÚNICAMENTE en JSON exacto:
+{
+  "status": "${statusForzado || '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",
+  "analysis": "1-2 oraciones adaptadas al perfil",
+  "waterAlert": null,
+  "missingCorrector": false,
+  "missingCorrectorMsg": null,
+  "products": [
+    {
+      "name": "nombre comercial",
+      "active": "activo leído — si NO_LEGIBLE: Ver etiqueta ⚠️",
+      "dose": "dosis leída — si NO_LEGIBLE: Ver etiqueta ⚠️",
+      "doseConfirm": false,
+      "doseNote": null
+    }
+  ],
+  "order": ["1. Nombre (dosis): razón WALE en 1 oración"],
+  "tip": "1 consejo práctico del Ing. William para ESTA mezcla y ESTA agua"
+}`;
+
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptOCR }, ...base64Images.map(img => ({ inlineData: img.inlineData }))] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 2048 }
+          contents: [{
+            parts: [
+              { text: prompt },
+              ...base64Images.map(img => ({ inlineData: img.inlineData }))
+            ]
+          }],
+          generationConfig: { temperature: 0, maxOutputTokens: 4096 }
         })
       });
 
-      if (!ocrResponse.ok) throw new Error(`OCR HTTP ${ocrResponse.status}`);
-      const ocrData = await ocrResponse.json();
-      const ocrText = ocrData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const ocrClean = ocrText.replace(/```json|```/g, '').trim();
-      const ocrParsed = JSON.parse(ocrClean);
-      const productosLeidos = ocrParsed.productos || [];
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
 
-      // ═══════════════════════════════════════════════════
-      // LLAMADA 2 — RAZONAMIENTO WALE: sin imágenes, solo datos OCR
-      // ═══════════════════════════════════════════════════
-      // ═══════════════════════════════════════════════════════════════
-      // CAPA JS: Validaciones duras que Gemini NO decide
-      // ═══════════════════════════════════════════════════════════════
+      // ═══════════════════════════════════════════════
+      // GARANTÍAS JS — corrigen alucinaciones post-respuesta
+      // ═══════════════════════════════════════════════
+
+      // 1. Detectar activos duplicados matemáticamente
       const detectarDuplicados = (productos) => {
         const dupes = [];
         for (let i = 0; i < productos.length; i++) {
@@ -156,111 +207,23 @@ Responde ÚNICAMENTE en JSON:
         return dupes;
       };
 
-      // ═══════════════════════════════════════════════════════════════
-      // LLAMADA 2 — GEMINI RAZONA: recibe texto OCR, sin imágenes
-      // Sin imágenes = sin reconocimiento de marca = sin alucinaciones
-      // Gemini hace el razonamiento agronómico completo con datos limpios
-      // ═══════════════════════════════════════════════════════════════
-      const promptRazonamiento = `Eres Trazza Mix, el motor agronómico de Trazza360.
-Recibes texto extraído por OCR de etiquetas físicas. NO tienes imágenes. NO tienes contexto visual.
-Solo existen los datos de texto que te entrego abajo. Nada más.
-
-DATOS EXTRAÍDOS POR OCR (lo que literalmente dice cada etiqueta):
-${JSON.stringify(productosLeidos, null, 2)}
-
-REGLA ABSOLUTA DE DATOS:
-→ Cualquier campo que diga "NO_LEGIBLE" = ese dato no existe. No lo completes, no lo inferes, no lo recuerdas.
-→ Si active = "NO_LEGIBLE" → en tu respuesta pon active: "Ver etiqueta ⚠️"
-→ Si dose = "NO_LEGIBLE" → en tu respuesta pon dose: "Ver etiqueta ⚠️", doseConfirm: true
-→ NUNCA uses tu conocimiento de entrenamiento para completar campos NO_LEGIBLE. Si no está en los datos OCR, no existe.
-
-CULTIVO: ${cropData.cultivo || 'No especificado'}
-PROBLEMA: ${cropData.problema || 'No especificado'}
-
-PERFIL: ${tipoUsuario === 'ingeniero'
-  ? 'INGENIERO AGRÓNOMO — terminología técnica: hidrólisis alcalina, CE, precipitación de sales, WP/EC/SL.'
-  : 'AGRICULTOR — muy breve, sin tecnicismos. "Tu agua está bien", "Agrégalo primero". Máximo 1 oración por campo.'}
-
-DATOS DEL AGUA:
-${sinDatosAgua
-  ? `Sin datos de agua ingresados. Asume agua neutra. Acidificantes/correctores van al FINAL por precaución.`
-  : `pH: ${ph} (${phVal > 8.5 ? '🚨 CRÍTICO — extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINO — requiere corrector' : phVal < 4.0 ? '🚨 CRÍTICO — extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDO — puede dañar activos' : phVal < 5.5 ? '⚠️ LÍMITE inferior del rango óptimo' : '✅ ÓPTIMO 5.5-7.5'})
-CE: ${ce} mS/cm (${ceVal > 3.0 ? '🚨 CRÍTICA — riesgo severo precipitación' : ceVal > 1.5 ? '⚠️ ALTA — riesgo precipitación de sales' : '✅ OK'})
-Dureza: ${hardness} ppm (${hardVal > 300 ? '🚨 MUY DURA — inactivación severa' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable' : '✅ BLANDA'})
-${esAgua_critica ? '→ AGUA CRÍTICA: status debe ser "🔴 Agua No Apta para Mezcla". waterAlert en MAYÚSCULAS urgente.' : aguaMalaMotor ? '→ AGUA PROBLEMÁTICA: si no hay corrector entre los productos → missingCorrector: true.' : '→ AGUA APTA: coadyuvantes y surfactantes NO son correctores, van al FINAL.'}`}
-
-═══ ALGORITMO WALE — ORDEN OBLIGATORIO ═══
-
-Clasifica cada producto por su formulación (léela del campo formulation del OCR) y ordénalo:
-PASO 0: Correctores de pH / ablandadores → SOLO si agua alcalina (pH>7.5) o muy dura (>150ppm). Si agua normal o sin datos → van al FINAL.
-PASO A: WP, WG, SP (sólidos) → siempre antes que líquidos
-PASO L: SL, EC, SC, SE, OD (líquidos) → después de sólidos  
-PASO E: Coadyuvantes, surfactantes, aceites, adherentes → SIEMPRE al final sin excepción
-
-COMPATIBILIDAD — razona con los activos que puedas leer:
-→ Mismo activo en 2 productos (ambos legibles) = 🔴 sobredosis
-→ Incompatibilidades conocidas (cobre+aceite, azufre+aceite en calor, etc.) = 🟡 Precaución
-→ Si algún activo es NO_LEGIBLE = no puedes afirmar incompatibilidad por activos, indica precaución
-
-DUREZA Y ACTIVOS SENSIBLES: Si dureza > 120ppm, menciona explícitamente qué activos legibles se ven afectados (glifosato, abamectina, cobre, mancozeb son sensibles). Nómbralos, no hagas mención genérica.
-
-Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
-{
-  "status": "${statusForzado || '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible — elige el correcto'}",
-  "analysis": "1-2 oraciones adaptadas al perfil del usuario",
-  "waterAlert": "1 oración sobre el agua o null",
-  "missingCorrector": false,
-  "missingCorrectorMsg": "1 oración urgente o null",
-  "products": [
-    {
-      "name": "nombre del OCR",
-      "active": "activo del OCR — si NO_LEGIBLE: Ver etiqueta ⚠️",
-      "dose": "dosis del OCR — si NO_LEGIBLE: Ver etiqueta ⚠️",
-      "doseConfirm": false,
-      "doseNote": null
-    }
-  ],
-  "order": ["1. Nombre (dosis): razón WALE en 1 oración"],
-  "tip": "1 consejo práctico específico del Ing. William para ESTA mezcla y ESTA agua"
-}`;
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptRazonamiento }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 4096 }
-        })
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
-
-      // GARANTÍAS FINALES EN CÓDIGO — incondicionales
-      // 1. Duplicados detectados matemáticamente → siempre rojo
       const duplicados = detectarDuplicados(parsed.products || []);
+
+      // 2. Forzar status rojo si hay duplicados
       if (duplicados.length > 0) {
         parsed.status = '🔴 Ingredientes duplicados — riesgo de sobredosis';
         parsed.analysis = `⚠️ ${duplicados.join('. ')}. Usar ambos es sobredosis — elige uno solo. ` + (parsed.analysis || '');
       }
-      // 2. Agua crítica → siempre rojo sin importar lo que diga Gemini
+
+      // 3. Agua crítica siempre fuerza rojo
       if (statusForzado) parsed.status = statusForzado;
-      // 3. Productos con doseConfirm → garantizar que no muestren dosis inventada
+
+      // 4. Cualquier doseConfirm verdadero → limpiar dosis inventada
       if (parsed.products) {
-        parsed.products = parsed.products.map((p, i) => {
-          const ocrP = productosLeidos[i] || {};
-          const doseNoLegible = !ocrP.dose || ocrP.dose === 'NO_LEGIBLE';
-          const activeNoLegible = !ocrP.active || ocrP.active === 'NO_LEGIBLE';
-          return {
-            ...p,
-            dose: doseNoLegible ? 'Ver etiqueta ⚠️' : p.dose,
-            doseConfirm: doseNoLegible,
-            active: activeNoLegible ? 'Ver etiqueta ⚠️' : p.active,
-          };
-        });
+        parsed.products = parsed.products.map(p => ({
+          ...p,
+          dose: p.doseConfirm ? 'Ver etiqueta ⚠️' : p.dose,
+        }));
       }
 
       setResult(parsed);
@@ -287,7 +250,7 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
         });
       } catch (fbErr) { console.warn('Firestore error:', fbErr); }
 
-    } catch (err) {
+        } catch (err) {
       console.error('Error:', err);
       alert('Error al analizar. Verifica tu conexión e intenta de nuevo.');
     } finally {
