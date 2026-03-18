@@ -161,9 +161,14 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
   "tip": "1 consejo práctico del Ing. William para ESTA mezcla y ESTA agua"
 }`;
 
+      // Timeout de 55s para evitar cuelgues en celular con red lenta
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 55000);
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -174,12 +179,16 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
           generationConfig: { temperature: 0, maxOutputTokens: 4096 }
         })
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
+      if (!text) throw new Error('Gemini no devolvió respuesta. Intenta de nuevo.');
+      // Extraer JSON robusto — busca el primer { hasta el último }
+      const jsonMatch = text.match(/{[\s\S]*}/);
+      if (!jsonMatch) throw new Error('Formato de respuesta inesperado. Intenta de nuevo.');
+      const parsed = JSON.parse(jsonMatch[0]);
 
       // ═══════════════════════════════════════════════
       // GARANTÍAS JS — corrigen alucinaciones post-respuesta
@@ -244,9 +253,17 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
         });
       } catch (fbErr) { console.warn('Firestore error:', fbErr); }
 
-        } catch (err) {
-      console.error('Error:', err);
-      alert('Error al analizar. Verifica tu conexión e intenta de nuevo.');
+    } catch (err) {
+      console.error('Error completo:', err);
+      if (err.name === 'AbortError') {
+        alert('El análisis tardó demasiado. Intenta con imágenes más pequeñas o mejor señal.');
+      } else if (err.message?.includes('JSON') || err instanceof SyntaxError) {
+        alert('Error al procesar la respuesta. Intenta de nuevo.');
+      } else if (err.message?.includes('HTTP 4') || err.message?.includes('HTTP 5')) {
+        alert('Error del servidor (' + err.message + '). Intenta en unos segundos.');
+      } else {
+        alert('Error al analizar. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
