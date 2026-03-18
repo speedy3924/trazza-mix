@@ -106,65 +106,71 @@ function App() {
 
 CULTIVO: ${cropData.cultivo || 'No especificado'}
 PROBLEMA FITOSANITARIO: ${cropData.problema || 'No especificado'}
-${cropData.cultivo || cropData.problema ? '→ Adapta las recomendaciones al cultivo y problema indicados.' : '→ Sin cultivo/problema especificado, da recomendaciones generales.'}
+${cropData.cultivo || cropData.problema ? '→ Adapta las recomendaciones de dosis y compatibilidad al cultivo y problema indicados.' : '→ Sin cultivo/problema especificado, da recomendaciones generales.'}
 
 PERFIL DEL USUARIO: ${tipoUsuario === 'ingeniero'
   ? 'INGENIERO AGRÓNOMO — usa terminología técnica completa: hidrólisis alcalina, CE, precipitación de sales, formulación WP/EC/SL, etc.'
-  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos".'}
+  : 'AGRICULTOR — MUY breve y directo. 1 oración por campo. Sin tecnicismos. Frases simples: "Tu agua está bien", "Agrégalo primero", "Este producto mata hongos". Nada de palabras técnicas.'}
 
 DATOS DEL AGUA:
-${sinDatosAgua ? `SIN DATOS (campo opcional):
-- waterAlert = null.
-- Aplica WALE asumiendo agua neutra (pH 7).
-- Acidificantes/correctores → FINAL por precaución.
-- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 8.5 ? '🚨 CRÍTICO — extremadamente alcalino' : phVal > 7.5 ? '⚠️ ALCALINA — REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — extremadamente ácido' : phVal < 5.0 ? '⚠️ ÁCIDA' : phVal < 5.5 ? '⚠️ LÍMITE INFERIOR' : '✅ BUENA — rango óptimo 5.5-7.5'}
-- CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA' : ceVal > 1.5 ? '⚠️ ALTA — riesgo precipitación' : '✅ OK'}
-- Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA' : hardVal > 150 ? '⚠️ DURA — corrector necesario' : hardVal > 120 ? '⚠️ MODERADA' : '✅ BLANDA'}
-${esAgua_critica ? '🚨 AGUA CRÍTICA: status = "🔴 Agua No Apta para Mezcla". waterAlert URGENTE. missingCorrector: true.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: si no hay corrector → missingCorrector: true.' : '✅ AGUA APTA: coadyuvantes NO son correctores, van al FINAL.'}`}
+${sinDatosAgua ? `SIN DATOS (campo opcional — el usuario no los ingresó):
+- waterAlert = null. NO advertir ni regañar al usuario por no ingresar datos.
+- Aplica WALE asumiendo agua neutra (pH 7, CE normal, dureza normal).
+- En el tip, menciona brevemente que ingresar datos de agua mejora la precisión del análisis.
+- missingCorrector = false.` : `- pH: ${ph} → ${phVal > 7.5 ? '⚠️ ALCALINA — degrada activos, REQUIERE corrector de pH' : phVal < 4.0 ? '🚨 CRÍTICO — pH extremadamente ácido, NO APTO para mezclas agroquímicas' : phVal < 5.0 ? '⚠️ ÁCIDA — pH bajo (rango óptimo 5.5-7.0)' : phVal < 5.5 ? '⚠️ LIGERAMENTE ÁCIDA — en límite inferior, monitorear' : '✅ BUENA — rango seguro (5.5-7.0)'}
+- CE: ${ce} mS/cm → ${ceVal > 3.0 ? '🚨 CRÍTICA — riesgo severo de precipitación y fitotoxicidad' : ceVal > 1.5 ? '⚠️ ALTA — riesgo de precipitación de sales' : '✅ OK'}
+- Dureza: ${hardness} ppm → ${hardVal > 300 ? '🚨 MUY DURA — inactivación severa de activos, corrector obligatorio' : hardVal > 150 ? '⚠️ DURA — riesgo de inactivación, corrector necesario (umbral: 150 ppm CaCO3)' : hardVal > 120 ? '⚠️ MODERADA — corrector recomendable (umbral: 120 ppm CaCO3)' : '✅ BLANDA — sin riesgo de inactivación'}
+${esAgua_critica ? '🚨 AGUA CRÍTICA: USA status "🔴 Agua No Apta para Mezcla". Activa waterAlert URGENTE. missingCorrector: true.' : esAgua_mala ? '🚨 AGUA PROBLEMÁTICA: Verifica si hay corrector. Si NO hay → missingCorrector: true.' : '✅ AGUA APTA: coadyuvantes/surfactantes NO son correctores y van al FINAL.'}`}
 
-═══ REGLAS WALE ═══
-PASO 0 — Correctores pH/ablandadores: SOLO si pH>7.5 o dureza>150ppm. Agua normal o sin datos → FINAL.
-PASO A — Sólidos WP/WG/SP → siempre primero.
-PASO L — Líquidos SL/EC/SC/SE/OD → después de sólidos.
-PASO E — Coadyuvantes/surfactantes/aceites → SIEMPRE al final sin excepción.
+═══ REGLAS WALE — ORDEN DE MEZCLA (INAMOVIBLES) ═══
 
-INSTRUCCIONES DE LECTURA — PRIORIDAD MÁXIMA:
-Para CADA producto en las imágenes, extrae name, active, formulation y dose ÚNICAMENTE leyendo el texto visible en la etiqueta.
-Esta regla aplica IGUAL para todos los perfiles (productor e ingeniero): el perfil solo cambia cómo redactas el análisis, NUNCA los datos leídos.
-→ active: lee el ingrediente activo impreso. Si no lo ves claramente → "Ver etiqueta ⚠️"
-→ dose: lee la dosis impresa. Si no la ves claramente → "Ver etiqueta ⚠️", doseConfirm: true
-→ PROHIBIDO completar active o dose con memoria o conocimiento previo, sin importar el perfil.
+PASO 0 — CORRECTOR DE pH/ABLANDADOR:
+  → SOLO si pH > 7.5 O dureza > 150 ppm Y hay un corrector entre los productos.
+  → Si el agua está bien (pH 5.0-7.5 y dureza ≤ 150): NO va ningún corrector al inicio.
+  → Si el agua YA es ácida (pH < 5.0): NO agregar más acidificantes — van al FINAL.
+  → BB5, Triada-Aguas, Triple A, Acidol-5, Surfaq: agua ALCALINA (pH>7.5) → paso 0. Agua neutra/ácida → paso E.
+  → pH entre 5.0-5.5: PRECAUCIÓN LEVE — no es crítico, solo menciona que está en límite inferior.
 
-COMPATIBILIDAD:
-→ Mismo activo en 2 productos (ambos legibles y coinciden) = 🔴 sobredosis
-→ Si algún activo dice "Ver etiqueta ⚠️" = NO afirmes incompatibilidad por activos
-→ Incompatibilidades reales (cobre+aceite, azufre+aceite en calor) = 🟡 Precaución
-→ Dureza >120ppm: menciona qué activos legibles se ven afectados por nombre
+PASO A — SÓLIDOS (WP, WG, SP): Polvos mojables y granulados dispersables. Siempre antes que líquidos.
+PASO L — LÍQUIDOS (SL, EC, SC, SE, OD): Concentrados solubles, emulsionables y suspensiones. Después de sólidos.
+PASO E — COADYUVANTES: Surfactantes, aceites, humectantes, adherentes. SIEMPRE AL FINAL sin excepción.
 
-Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
+CLASIFICACIÓN:
+- WP/PM → paso A | WG/WDG → paso A | SP → paso A
+- SL/EC/SC/SE/OD → paso L
+- Coadyuvante/surfactante/aceite/adherente/humectante → paso E
+- Corrector pH/acidificante/ablandador → paso 0 (SOLO si agua mala)
+
+INSTRUCCIONES:
+1. Identifica todos los productos de las imágenes. Lee el ingrediente activo DIRECTAMENTE de la etiqueta — lo que ves impreso. No uses memoria para completar activos. Si no lo lees claramente → active: "Ver etiqueta ⚠️". ESTO APLICA IGUAL PARA TODOS LOS PERFILES.
+2. DOSIS: Lee la dosis DIRECTAMENTE de la etiqueta visible. Si la ves claramente → úsala. Si NO puedes leerla → dose: "Ver etiqueta ⚠️", doseConfirm: true. NUNCA inventes dosis de memoria.
+3. Aplica WALE estrictamente. Coadyuvantes van siempre al FINAL si el agua está bien.
+4. El TIP debe ser específico a ESTOS productos y ESTA agua. Nunca genérico.
+5. Si dureza > 120 ppm: nombra explícitamente qué activos legibles se ven afectados (glifosato, abamectina, cobre, mancozeb son sensibles).
+6. Adapta SOLO el lenguaje del analysis, waterAlert y tip al perfil — nunca los datos leídos.
+
+Responde ÚNICAMENTE en JSON exacto, sin texto adicional, sin bloques de código:
 {
-  "status": "${statusForzado || '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",
-  "analysis": "1-2 oraciones adaptadas al perfil",
-  "waterAlert": null,
+  "status": "${statusForzado ? statusForzado : '🟢 Compatible / 🟡 Precaución / 🔴 Incompatible'}",
+  "analysis": "Máximo 2 oraciones adaptadas al perfil.",
+  "waterAlert": "1 oración sobre el agua, o null si está bien",
   "missingCorrector": false,
-  "missingCorrectorMsg": null,
+  "missingCorrectorMsg": "1 oración urgente si falta corrector, o null",
   "products": [
     {
-      "name": "nombre comercial",
-      "active": "activo leído de la etiqueta — si no legible: Ver etiqueta ⚠️",
-      "dose": "dosis leída de la etiqueta — si no legible: Ver etiqueta ⚠️",
+      "name": "Nombre comercial",
+      "active": "Ingrediente activo leído de la etiqueta — si no legible: Ver etiqueta ⚠️",
+      "dose": "Dosis leída de la etiqueta — si no legible: Ver etiqueta ⚠️",
       "doseConfirm": false,
-      "doseNote": null
+      "doseNote": "1 oración de razón o null"
     }
   ],
-  "order": ["1. Nombre (dosis): razón WALE en 1 oración"],
-  "tip": "1 consejo práctico del Ing. William para ESTA mezcla y ESTA agua"
+  "order": ["1. Nombre (dosis): razón en 1 oración"],
+  "tip": "1 consejo específico del Ing. William para ESTA mezcla con ESTA agua"
 }`;
 
-      // Timeout de 55s para evitar cuelgues en celular con red lenta
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 55000);
-
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,17 +182,20 @@ Responde ÚNICAMENTE en JSON exacto, sin texto adicional:
               ...base64Images.map(img => ({ inlineData: img.inlineData }))
             ]
           }],
-          generationConfig: { temperature: 0, maxOutputTokens: 4096 }
+          generationConfig: { temperature: 0, maxOutputTokens: 8192 }
         })
       });
       clearTimeout(timeoutId);
 
+      clearTimeout(timeoutId);
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       if (!text) throw new Error('Gemini no devolvió respuesta. Intenta de nuevo.');
       // Extraer JSON robusto — busca el primer { hasta el último }
-      const jsonMatch = text.match(/{[\s\S]*}/);
+      const lastBrace = text.lastIndexOf("}");
+      const firstBrace = text.indexOf("{");
+      const jsonMatch = (firstBrace !== -1 && lastBrace !== -1) ? [text.slice(firstBrace, lastBrace + 1)] : null;
       if (!jsonMatch) throw new Error('Formato de respuesta inesperado. Intenta de nuevo.');
       const parsed = JSON.parse(jsonMatch[0]);
 
